@@ -6608,6 +6608,7 @@ Y.extend(NumericAxis, Y.AxisType,
                 else if(maxGreaterThanZero && !minGreaterThanZero)
                 {
                         topTicks = Math.round( units / ((-1 * min)/max + 1)    );
+                        topTicks = Math.max(Math.min(topTicks, units - 1), 1);
                         botTicks = units - topTicks;
                         tempMax = Math.ceil( max/topTicks );
 
@@ -6653,6 +6654,7 @@ Y.extend(NumericAxis, Y.AxisType,
                     if(alwaysShowZero)
                     {
                         topTicks = Math.round( units / ( (-1 * min) /max + 1) );
+                        topTicks = Math.max(Math.min(topTicks, units - 1), 1);
                         botTicks = units - topTicks;
 
                         if(useIntegers)
@@ -10823,7 +10825,7 @@ Y.StackedColumnSeries = Y.Base.create("stackedColumnSeries", Y.ColumnSeries, [Y.
             top = ycoords[i];
             if(useOrigin)
             {
-                h = this._bottomOrigin - top;
+                h = Math.abs(this._bottomOrigin - top);
                 if(top < this._bottomOrigin)
                 {
                     positiveBaseValues[i] = top;
@@ -10833,6 +10835,7 @@ Y.StackedColumnSeries = Y.Base.create("stackedColumnSeries", Y.ColumnSeries, [Y.
                 {
                     positiveBaseValues[i] = this._bottomOrigin;
                     negativeBaseValues[i] = top;
+                    top -= h;
                 }
                 else
                 {
@@ -10845,10 +10848,11 @@ Y.StackedColumnSeries = Y.Base.create("stackedColumnSeries", Y.ColumnSeries, [Y.
                 if(top > this._bottomOrigin)
                 {
                     top += (negativeBaseValues[i] - this._bottomOrigin);
-                    h = negativeBaseValues[i] - top;
+                    h = top - negativeBaseValues[i];
                     negativeBaseValues[i] = top;
+                    top -= h;
                 }
-                else if(top < this._bottomOrigin)
+                else if(top <= this._bottomOrigin)
                 {
                     top = positiveBaseValues[i] - (this._bottomOrigin - ycoords[i]);
                     h = positiveBaseValues[i] - top;
@@ -11083,11 +11087,12 @@ Y.StackedBarSeries = Y.Base.create("stackedBarSeries", Y.BarSeries, [Y.StackingU
             
             if(useOrigin)
             {
-                w = left - this._leftOrigin;
+                w = Math.abs(left - this._leftOrigin);
                 if(left > this._leftOrigin)
                 {
                     positiveBaseValues[i] = left;
                     negativeBaseValues[i] = this._leftOrigin;
+                    left -= w;
                 }
                 else if(left < this._leftOrigin)
                 {   
@@ -11099,7 +11104,6 @@ Y.StackedBarSeries = Y.Base.create("stackedBarSeries", Y.BarSeries, [Y.StackingU
                     positiveBaseValues[i] = left;
                     negativeBaseValues[i] = this._leftOrigin;
                 }
-                left -= w;
             }
             else
             {
@@ -11109,7 +11113,7 @@ Y.StackedBarSeries = Y.Base.create("stackedBarSeries", Y.BarSeries, [Y.StackingU
                     w = negativeBaseValues[i] - left;
                     negativeBaseValues[i] = left;
                 }
-                else if(left > this._leftOrigin)
+                else if(left >= this._leftOrigin)
                 {
                     left += (positiveBaseValues[i] - this._leftOrigin);
                     w = left - positiveBaseValues[i];
