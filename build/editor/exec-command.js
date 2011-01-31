@@ -39,17 +39,6 @@ YUI.add('exec-command', function(Y) {
             command: function(action, value) {
                 var fn = ExecCommand.COMMANDS[action];
                 
-                /*
-                if (action !== 'insertbr') {
-                    Y.later(0, this, function() {
-                        var inst = this.getInstance();
-                        if (inst && inst.Selection) {
-                            inst.Selection.cleanCursor();
-                        }
-                    });
-                }
-                */
-
                 if (fn) {
                     return fn.call(this, action, value);
                 } else {
@@ -419,6 +408,16 @@ YUI.add('exec-command', function(Y) {
                             el.id = '';
                             range.moveToElementText(el);
                             range.select();
+                        }
+                    } else if (Y.UA.ie) {
+                        var p = inst.one(sel._selection.parentElement());
+                        if (p.test('p')) {
+                            var html = Y.Selection.getText(p);
+                            if (html == '') {
+                                var l = inst.Node.create(Y.Lang.sub('<{tag}><li></li></{tag}>', { tag: tag }));
+                                p.replace(l);
+                                sel.selectNode(l.one('li'));
+                            }
                         }
                     } else {
                         this._command(cmd, null);

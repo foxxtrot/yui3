@@ -428,7 +428,7 @@ YUI.add('frame', function(Y) {
         _setExtraCSS: function(css) {
             if (this._ready) {
                 var inst = this.getInstance(),
-                    node = inst.get('#extra_css');
+                    node = inst.one('#extra_css');
                 
                 node.remove();
                 inst.one('head').append('<style id="extra_css">' + css + '</style>');
@@ -1229,7 +1229,7 @@ YUI.add('selection', function(Y) {
     * @static
     * @property REG_CHAR
     */   
-    Y.Selection.REG_CHAR = /[a-zA-Z-0-9_]/gi;
+    Y.Selection.REG_CHAR = /[a-zA-Z-0-9_!@#\$%\^&*\(\)-=_+\[\]\\{}|;':",.\/<>\?]/gi;
 
     /**
     * Regular Expression to determine if a string has a non-character in it
@@ -1551,7 +1551,8 @@ YUI.add('selection', function(Y) {
                 if (n.getStyle(FONT_FAMILY) ==  Y.Selection.TMP) {
                     n.setStyle(FONT_FAMILY, '');
                     n.removeAttribute('face');
-                    if (n.getAttribute('style') === '') {
+                    var s = n.getAttribute('style');
+                    if (s === '' || (s.toLowerCase() == 'font-family: ')) {
                         n.removeAttribute('style');
                     }
                     if (!n.test('body')) {
@@ -1895,17 +1896,6 @@ YUI.add('exec-command', function(Y) {
             command: function(action, value) {
                 var fn = ExecCommand.COMMANDS[action];
                 
-                /*
-                if (action !== 'insertbr') {
-                    Y.later(0, this, function() {
-                        var inst = this.getInstance();
-                        if (inst && inst.Selection) {
-                            inst.Selection.cleanCursor();
-                        }
-                    });
-                }
-                */
-
                 if (fn) {
                     return fn.call(this, action, value);
                 } else {
@@ -2275,6 +2265,16 @@ YUI.add('exec-command', function(Y) {
                             el.id = '';
                             range.moveToElementText(el);
                             range.select();
+                        }
+                    } else if (Y.UA.ie) {
+                        var p = inst.one(sel._selection.parentElement());
+                        if (p.test('p')) {
+                            var html = Y.Selection.getText(p);
+                            if (html == '') {
+                                var l = inst.Node.create(Y.Lang.sub('<{tag}><li></li></{tag}>', { tag: tag }));
+                                p.replace(l);
+                                sel.selectNode(l.one('li'));
+                            }
                         }
                     } else {
                         this._command(cmd, null);
@@ -2948,7 +2948,7 @@ YUI.add('editor-base', function(Y) {
             var inst = this.getInstance(),
                 sel = inst.config.doc.selection.createRange();
             
-            if ((!sel.compareEndPoints('StartToEnd', sel))) {
+            if (sel.compareEndPoints && !sel.compareEndPoints('StartToEnd', sel)) {
                 sel.pasteHTML('<var id="yui-ie-cursor">');
             }
         },
@@ -3559,38 +3559,9 @@ YUI.add('editor-lists', function(Y) {
         }
     });
 
-
     Y.namespace('Plugin');
 
     Y.Plugin.EditorLists = EditorLists;
-
-    Y.mix(Y.Plugin.ExecCommand.COMMANDS, {
-        /**
-        * Override for the insertunorderedlist method from the <a href="Plugin.EditorLists.html">EditorLists</a> plugin.
-        * @for ExecCommand
-        * @method COMMANDS.insertunorderedlist
-        * @static
-        * @param {String} cmd The command executed: insertunorderedlist
-        * @return {Node} Node instance of the item touched by this command.
-        */
-        insertunorderedlist: function(cmd) {
-            var inst = this.get('host').getInstance(), out;
-            this.get('host')._execCommand(cmd, '');
-        },
-        /**
-        * Override for the insertorderedlist method from the <a href="Plugin.EditorLists.html">EditorLists</a> plugin.
-        * @for ExecCommand
-        * @method COMMANDS.insertorderedlist
-        * @static
-        * @param {String} cmd The command executed: insertorderedlist
-        * @return {Node} Node instance of the item touched by this command.
-        */
-        insertorderedlist: function(cmd) {
-            var inst = this.get('host').getInstance(), out;
-            this.get('host')._execCommand(cmd, '');
-        }
-    });
-
 
 
 
@@ -3837,12 +3808,18 @@ YUI.add('editor-bidi', function(Y) {
      * @for Plugin.ExecCommand
      * @property COMMANDS.bidi
      */
-
+    //TODO -- This should not add this comment unless the plugin is added to the instance..
     Y.Plugin.ExecCommand.COMMANDS.bidi = function(cmd, direction) {
         var inst = this.getInstance(),
             sel = new inst.Selection(),
+            ns = this.get(HOST).get(HOST).editorBidi,
             returnValue, block,
             selected, selectedBlocks, dir;
+
+        if (!ns) {
+            Y.error('bidi execCommand is not available without the EditorBiDi plugin.');
+            return;
+        }
 
         inst.Selection.filterBlocks();
         if (sel.isCollapsed) { // No selection
@@ -3857,25 +3834,35 @@ YUI.add('editor-bidi', function(Y) {
                 }
             }
             block.setAttribute(DIR, direction);
+            if (Y.UA.ie) {
+                var b = block.all('br.yui-cursor');
+                if (b.size() === 1 && block.get('childNodes').size() == 1) {
+                    b.remove();
+                }
+            }
             returnValue = block;
         } else { // some text is selected
             selected = sel.getSelected();
             selectedBlocks = [];
             selected.each(function(node) {
-                /*
-                * Temporarily removed this check, should already be fixed
-                * in Y.Selection.getSelected()
-                */
-                //if (!node.test(BODY)) { // workaround for a YUI bug
-                   selectedBlocks.push(EditorBidi.blockParent(node));
-                //}
+                selectedBlocks.push(EditorBidi.blockParent(node));
             });
             selectedBlocks = inst.all(EditorBidi.addParents(selectedBlocks));
-            selectedBlocks.setAttribute(DIR, direction);
+            selectedBlocks.each(function(n) {
+                var d = direction;
+                if (!d) {
+                    dir = n.getAttribute(DIR);
+                    if (!dir || dir == 'ltr') {
+                        d = 'rtl';
+                    } else {
+                        d = 'ltr';
+                    }
+                }
+                n.setAttribute(DIR, d);
+            });
             returnValue = selectedBlocks;
         }
-
-        this.get(HOST).get(HOST).editorBidi._checkForChange();
+        ns._checkForChange();
         return returnValue;
     };
 
