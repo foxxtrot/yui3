@@ -1050,6 +1050,23 @@ YUI.add('selection', function(Y) {
     };
     
     /**
+    * Utility method to remove dead font-family styles from an element.
+    * @static
+    * @method removeFontFamily
+    */
+    Y.Selection.removeFontFamily = function(n) {
+        n.removeAttribute('face');
+        var s = n.getAttribute('style').toLowerCase();
+        if (s === '' || (s == 'font-family: ')) {
+            n.removeAttribute('style');
+        }
+        if (s.match(Y.Selection.REG_FONTFAMILY)) {
+            s = s.replace(Y.Selection.REG_FONTFAMILY, '');
+            n.setAttribute('style', s);
+        }
+    };
+
+    /**
     * Performs a prefilter on all nodes in the editor. Looks for nodes with a style: fontFamily or font face
     * It then creates a dynamic class assigns it and removed the property. This is so that we don't lose
     * the fontFamily when selecting nodes.
@@ -1072,19 +1089,8 @@ YUI.add('selection', function(Y) {
             if (raw.style[FONT_FAMILY]) {
                 classNames['.' + n._yuid] = raw.style[FONT_FAMILY];
                 n.addClass(n._yuid);
-                //This was causing issues in IE
-                //raw.style[FONT_FAMILY] = 'inherit';
 
-                raw.removeAttribute('face');
-                if (raw.getAttribute('style') === '') {
-                    raw.removeAttribute('style');
-                }
-                //This is for IE
-                if (raw.getAttribute('style')) {
-                    if (raw.getAttribute('style').toLowerCase() === 'font-family: ') {
-                        raw.removeAttribute('style');
-                    }
-                }
+                Y.Selection.removeFontFamily(raw);
             }
             /*
             if (n.getStyle(FONT_FAMILY)) {
@@ -1263,6 +1269,13 @@ YUI.add('selection', function(Y) {
         var endTime = (new Date()).getTime();
         Y.log('FilterBlocks Timer: ' + (endTime - startTime) + 'ms', 'info', 'selection');
     };
+
+    /**
+    * Regular Expression used to find dead font-family styles
+    * @static
+    * @property REG_FONTFAMILY
+    */   
+    Y.Selection.REG_FONTFAMILY = /font-family: ;/;
 
     /**
     * Regular Expression to determine if a string has a character in it
@@ -1593,11 +1606,7 @@ YUI.add('selection', function(Y) {
             nodes.each(function(n, k) {
                 if (n.getStyle(FONT_FAMILY) ==  Y.Selection.TMP) {
                     n.setStyle(FONT_FAMILY, '');
-                    n.removeAttribute('face');
-                    var s = n.getAttribute('style');
-                    if (s === '' || (s.toLowerCase() == 'font-family: ')) {
-                        n.removeAttribute('style');
-                    }
+                    Y.Selection.removeFontFamily(n);
                     if (!n.test('body')) {
                         items.push(Y.Node.getDOMNode(nodes.item(k)));
                     }
@@ -2079,14 +2088,45 @@ YUI.add('exec-command', function(Y) {
                 * @param {String} cmd The command executed: insertbr
                 */
                 insertbr: function(cmd) {
-                    var inst = this.getInstance(), cur,
-                        sel = new inst.Selection();
+                    var inst = this.getInstance(),
+                        sel = new inst.Selection(),
+                        html = '<var>|</var>', last = null,
+                        q = (Y.UA.webkit) ? 'span.Apple-style-span,var' : 'var';
 
-                    sel.setCursor();
-                    cur = sel.getCursor();
-                    cur.insert('<br>', 'before');
-                    sel.focusCursor(true, false);
-                    return ((cur && cur.previous) ? cur.previous() : null);
+                    if (sel._selection.pasteHTML) {
+                        sel._selection.pasteHTML(html);
+                    } else {
+                        this._command('inserthtml', html);
+                    }
+
+                    var insert = function(n) {
+                        var c = inst.Node.create('<br>');
+                        n.insert(c, 'before');
+                        return c;
+                    };
+
+                    inst.all(q).each(function(n) {
+                        var g = true;   
+                        if (Y.UA.webkit) {
+                            g = false;
+                            if (n.get('innerHTML') === '|') {
+                                g = true;
+                            }
+                        }
+                        if (g) {
+                            last = insert(n);
+                            if ((!last.previous() || !last.previous().test('br')) && Y.UA.gecko) {
+                                var s = last.cloneNode();
+                                last.insert(s, 'after');
+                                last = s;
+                            }
+                            n.remove();
+                        }
+                    });
+                    if (Y.UA.webkit && last) {
+                        insert(last);
+                        sel.selectNode(last);
+                    }
                 },
                 /**
                 * Inserts an image at the cursor position
@@ -2278,26 +2318,28 @@ YUI.add('exec-command', function(Y) {
                 * @param {String} tag The tag to deal with
                 */
                 list: function(cmd, tag) {
-                    var inst = this.getInstance(),
+                    var inst = this.getInstance(), html,
+                        DIR = 'dir', cls = 'yui3-touched',
+                        dir, range, div, elm, n, str, s, par, list, lis,
                         sel = new inst.Selection();
 
                     cmd = 'insert' + ((tag === 'ul') ? 'un' : '') + 'orderedlist';
                     
                     if (Y.UA.ie && !sel.isCollapsed) {
-                        var range = sel._selection;
-                        var html = range.htmlText;
-                        var div = inst.Node.create(html);
+                        range = sel._selection;
+                        html = range.htmlText;
+                        div = inst.Node.create(html);
                         if (div.test(tag)) {
-                            var elm = range.item ? range.item(0) : range.parentElement();
-                            var n = inst.one(elm),
-                                lis = n.all('li');
+                            elm = range.item ? range.item(0) : range.parentElement();
+                            n = inst.one(elm);
+                            lis = n.all('li');
 
-                            var str = '<div>';
+                            str = '<div>';
                             lis.each(function(l) {
                                 str += l.get('innerHTML') + '<br>';
                             });
                             str += '</div>';
-                            var s = inst.Node.create(str);
+                            s = inst.Node.create(str);
                             if (n.get('parentNode').test('div')) {
                                 n = n.get('parentNode');
                             }
@@ -2305,30 +2347,67 @@ YUI.add('exec-command', function(Y) {
                             range.moveToElementText(s._node);
                             range.select();
                         } else {
+                            par = Y.one(range.parentElement());
+                            if (!par.test(inst.Selection.BLOCKS)) {
+                                par = par.ancestor(inst.Selection.BLOCKS);
+                            }
+                            if (par) {
+                                if (par.hasAttribute(DIR)) {
+                                    dir = par.getAttribute(DIR);
+                                }
+                            }
                             html = html.split(/<br>/i);
-                            var list = '<' + tag + ' id="ie-list">';
+                            list = '<' + tag + ' id="ie-list">';
                             Y.each(html, function(v) {
+                                var a = inst.Node.create(v);
+                                if (a.test('p')) {
+                                    if (a.hasAttribute(DIR)) {
+                                        dir = a.getAttribute(DIR);
+                                    }
+                                    v = a.get('innerHTML');
+                                }
                                 list += '<li>' + v + '</li>';
                             });
-                            list += '<' + tag + '>';
+                            list += '</' + tag + '>';
                             range.pasteHTML(list);
-                            var el = inst.config.doc.getElementById('ie-list');
-                            el.id = '';
-                            range.moveToElementText(el);
+                            elm = inst.config.doc.getElementById('ie-list');
+                            elm.id = '';
+                            if (dir) {
+                                elm.setAttribute(DIR, dir);
+                            }
+                            range.moveToElementText(elm);
                             range.select();
                         }
                     } else if (Y.UA.ie) {
-                        var p = inst.one(sel._selection.parentElement());
-                        if (p.test('p')) {
-                            var html = Y.Selection.getText(p);
-                            if (html == '') {
-                                var l = inst.Node.create(Y.Lang.sub('<{tag}><li></li></{tag}>', { tag: tag }));
-                                p.replace(l);
-                                sel.selectNode(l.one('li'));
+                        par = inst.one(sel._selection.parentElement());
+                        if (par.test('p')) {
+                            html = Y.Selection.getText(par);
+                            if (html === '') {
+                                list = inst.Node.create(Y.Lang.sub('<{tag}><li></li></{tag}>', { tag: tag }));
+                                par.replace(list);
+                                sel.selectNode(list.one('li'));
                             }
                         }
                     } else {
+                        inst.all(tag).addClass(cls);
+                        if (sel.anchorNode.test(inst.Selection.BLOCKS)) {
+                            par = sel.anchorNode;
+                        } else {
+                            par = sel.anchorNode.ancestor(inst.Selection.BLOCKS);
+                        }
+                        if (par && par.hasAttribute(DIR)) {
+                            dir = par.getAttribute(DIR);
+                        }
                         this._command(cmd, null);
+                        list = inst.all(tag);
+                        if (dir) {
+                            list.each(function(n) {
+                                if (!n.hasClass(cls)) {
+                                    n.setAttribute(DIR, dir);
+                                }
+                            });
+                        }
+                        list.removeClass(cls);
                     }
                 },
                 /**
