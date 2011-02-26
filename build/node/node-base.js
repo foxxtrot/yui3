@@ -9,7 +9,7 @@ YUI.add('node-base', function(Y) {
 /**
  * The Node class provides a wrapper for manipulating DOM Nodes.
  * Node properties can be accessed via the set/get methods.
- * Use Y.get() to retrieve Node instances.
+ * Use Y.one() to retrieve Node instances.
  *
  * <strong>NOTE:</strong> Node properties are accessed using
  * the <code>set</code> and <code>get</code> methods.
@@ -2036,6 +2036,8 @@ Y.Node.prototype.focus = function () {
         this._node.focus();
     } catch (e) {
     }
+
+    return this;
 };
 
 // IE throws error when setting input.type = 'hidden',
@@ -2179,7 +2181,7 @@ Y.Array.each(ArrayMethods, function(name) {
             i = 0,
             arg;
 
-        while ((arg = arguments[i++])) { // use DOM nodes/nodeLists 
+        while (typeof (arg = arguments[i++]) != 'undefined') { // use DOM nodes/nodeLists 
             args.push(arg._node || arg._nodes || arg);
         }
         return Y.Node.scrubVal(ArrayProto[name].apply(this._nodes, args));

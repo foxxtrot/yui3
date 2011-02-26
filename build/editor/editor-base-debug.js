@@ -382,7 +382,10 @@ YUI.add('editor-base', function(Y) {
         * @method _beforeFrameDeactivate
         * @private
         */
-        _beforeFrameDeactivate: function() {
+        _beforeFrameDeactivate: function(e) {
+            if (e.frameTarget.test('html')) { //Means it came from a scrollbar
+                return;
+            }
             var inst = this.getInstance(),
                 sel = inst.config.doc.selection.createRange();
             
@@ -395,7 +398,10 @@ YUI.add('editor-base', function(Y) {
         * @method _onFrameActivate
         * @private
         */
-        _onFrameActivate: function() {
+        _onFrameActivate: function(e) {
+            if (e.frameTarget.test('html')) { //Means it came from a scrollbar
+                return;
+            }
             var inst = this.getInstance(),
                 sel = new inst.Selection(),
                 range = sel.createRange(),
@@ -404,11 +410,15 @@ YUI.add('editor-base', function(Y) {
             if (cur.size()) {
                 cur.each(function(n) {
                     n.set('id', '');
-                    range.moveToElementText(n._node);
-                    range.move('character', -1);
-                    range.move('character', 1);
-                    range.select();
-                    range.text = '';
+                    if (range.moveToElementText) {
+                        try {
+                            range.moveToElementText(n._node);
+                            range.move('character', -1);
+                            range.move('character', 1);
+                            range.select();
+                            range.text = '';
+                        } catch (e) {}
+                    }
                     n.remove();
                 });
             }

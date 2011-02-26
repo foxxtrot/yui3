@@ -530,6 +530,15 @@ proto = {
                         }
                     }
 
+                    if (mod.fn) {
+                        try {
+                            mod.fn(Y, name);
+                        } catch (e) {
+                            Y.error('Attach error: ' + name, e, name);
+                            return false;
+                        }
+                    }
+
                     if (use) {
                         for (j = 0; j < use.length; j++) {
                             if (!done[use[j]]) {
@@ -541,14 +550,7 @@ proto = {
                         }
                     }
 
-                    if (mod.fn) {
-                        try {
-                            mod.fn(Y, name);
-                        } catch (e) {
-                            Y.error('Attach error: ' + name, e, name);
-                            return false;
-                        }
-                    }
+
 
                 }
             }
@@ -2154,6 +2156,8 @@ YUI.Env._loaderQueue = YUI.Env._loaderQueue || new Queue();
 
 var CACHED_DELIMITER = '__',
 
+NOT_ENUMERATED = ['toString', 'valueOf'],
+
 /*
  * IE will not enumerate native functions in a derived object even if the
  * function was overridden.  This is a workaround for specific functions
@@ -2165,12 +2169,15 @@ var CACHED_DELIMITER = '__',
  * @private
  */
 _iefix = function(r, s) {
-    var fn = s.toString;
-    if (Y.Lang.isFunction(fn) && fn != Object.prototype.toString) {
-        r.toString = fn;
+    var i, fname, fn;
+    for (i = 0; i < NOT_ENUMERATED.length; i++) {
+        fname = NOT_ENUMERATED[i];
+        fn = s[fname];
+        if (L.isFunction(fn) && fn != Object.prototype[fname]) {
+            r[fname] = fn;
+        }
     }
 };
-
 
 /**
  * Returns a new object containing all of the properties of
@@ -2597,13 +2604,15 @@ O.isEmpty = function(o) {
 /**
  * YUI user agent detection.
  * Do not fork for a browser if it can be avoided.  Use feature detection when
- * you can.  Use the user agent as a last resort.  UA stores a version
- * number for the browser engine, 0 otherwise.  This value may or may not map
- * to the version number of the browser using the engine.  The value is
- * presented as a float so that it can easily be used for boolean evaluation
- * as well as for looking for a particular range of versions.  Because of this,
- * some of the granularity of the version info may be lost (e.g., Gecko 1.8.0.9
- * reports 1.8).
+ * you can.  Use the user agent as a last resort.  For all fields listed
+ * as @type float, UA stores a version number for the browser engine,
+ * 0 otherwise.  This value may or may not map to the version number of
+ * the browser using the engine.  The value is presented as a float so
+ * that it can easily be used for boolean evaluation as well as for
+ * looking for a particular range of versions.  Because of this,
+ * some of the granularity of the version info may be lost.  The fields that
+ * are @type string default to null.  The API docs list the values that
+ * these fields can have.
  * @class UA
  * @static
  */
@@ -2615,7 +2624,7 @@ O.isEmpty = function(o) {
 * @returns {Object} The Y.UA object
 */
 YUI.Env.parseUA = function(subUA) {
-    
+
     var numberify = function(s) {
             var c = 0;
             return parseFloat(s.replace(/\./g, function() {
@@ -2705,6 +2714,7 @@ YUI.Env.parseUA = function(subUA) {
          * devices with the WebKit-based browser, and Opera Mini.
          * @property mobile
          * @type string
+         * @default null
          * @static
          */
         mobile: null,
@@ -2741,6 +2751,7 @@ YUI.Env.parseUA = function(subUA) {
          * General truthy check for iPad, iPhone or iPod
          * @property ios
          * @type float
+         * @default null
          * @static
          */
         ios: null,
@@ -2778,6 +2789,7 @@ YUI.Env.parseUA = function(subUA) {
          * The operating system.  Currently only detecting windows or macintosh
          * @property os
          * @type string
+         * @default null
          * @static
          */
         os: null
@@ -3718,6 +3730,7 @@ Y.mix(Y.namespace('Features'), {
 var add = Y.Features.add;
 // autocomplete-list-keys-sniff.js
 add('load', '0', {
+    "name": "autocomplete-list-keys", 
     "test": function (Y) {
     // Only add keyboard support to autocomplete-list if this doesn't appear to
     // be an iOS or Android-based mobile device.
@@ -3736,6 +3749,7 @@ add('load', '0', {
 });
 // ie-style-test.js
 add('load', '1', {
+    "name": "dom-style-ie", 
     "test": function (Y) {
 
     var testFeature = Y.Features.test,
@@ -3766,11 +3780,13 @@ add('load', '1', {
 });
 // 0
 add('load', '2', {
+    "name": "widget-base-ie", 
     "trigger": "widget-base", 
     "ua": "ie"
 });
 // ie-base-test.js
 add('load', '3', {
+    "name": "event-base-ie", 
     "test": function(Y) {
     var imp = Y.config.doc && Y.config.doc.implementation;
     return (imp && (!imp.hasFeature('Events', '2.0')));
@@ -3779,6 +3795,7 @@ add('load', '3', {
 });
 // dd-gestures-test.js
 add('load', '4', {
+    "name": "dd-gestures", 
     "test": function(Y) {
     return (Y.config.win && ('ontouchstart' in Y.config.win && !Y.UA.chrome));
 }, 
@@ -3786,6 +3803,7 @@ add('load', '4', {
 });
 // history-hash-ie-test.js
 add('load', '5', {
+    "name": "history-hash-ie", 
     "test": function (Y) {
     var docMode = Y.config.doc.documentMode;
 
@@ -4060,6 +4078,8 @@ YUI.add('yui-later', function(Y) {
  * @submodule yui-later
  */
 
+var NO_ARGS = [];
+
 /**
  * Executes the supplied function in the context of the supplied
  * object 'when' milliseconds later.  Executes the function a
@@ -4076,6 +4096,10 @@ YUI.add('yui-later', function(Y) {
  * the function is executed with one parameter for each array item.
  * If you need to pass a single array parameter, it needs to be wrapped
  * in an array [myarray].
+ *
+ * Note: native methods in IE may not have the call and apply methods.
+ * In this case, it will work, but you are limited to four arguments.
+ *
  * @param periodic {boolean} if true, executes continuously at supplied
  * interval until canceled.
  * @return {object} a timer object. Call the cancel() method on this
@@ -4083,20 +4107,17 @@ YUI.add('yui-later', function(Y) {
  */
 Y.later = function(when, o, fn, data, periodic) {
     when = when || 0;
+    data = (!Y.Lang.isUndefined(data)) ? Y.Array(data) : data;
 
-    var m = fn, f, id;
-
-    if (o && Y.Lang.isString(fn)) {
-        m = o[fn];
-    }
-
-    f = !Y.Lang.isUndefined(data) ? function() {
-        m.apply(o, Y.Array(data));
-    } : function() {
-        m.call(o);
-    };
-
-    id = (periodic) ? setInterval(f, when) : setTimeout(f, when);
+    var method = (o && Y.Lang.isString(fn)) ? o[fn] : fn,
+        wrapper = function() {
+            if (!method.apply) {
+                method(data[0], data[1], data[2], data[3]);
+            } else {
+                method.apply(o, data || NO_ARGS);
+            }
+        },
+        id = (periodic) ? setInterval(wrapper, when) : setTimeout(wrapper, when);
 
     return {
         id: id,
@@ -6009,7 +6030,7 @@ Y.mix(Y_DOM, {
                             }
 
                         if ((scrollTop || scrollLeft)) {
-                            if (!Y.UA.ios) {
+                            if (!Y.UA.ios || (Y.UA.ios >= 4.2)) {
                                 xy[0] += scrollLeft;
                                 xy[1] += scrollTop;
                             }
@@ -6263,7 +6284,7 @@ Y.mix(DOM, {
      * @for DOM
      * @method region
      * @param {HTMLElement} element The DOM element. 
-     @return {Object} Object literal containing the following about this element: (top, right, bottom, left)
+     * @return {Object} Object literal containing the following about this element: (top, right, bottom, left)
      */
     region: function(node) {
         var xy = DOM.getXY(node),
@@ -6288,7 +6309,7 @@ Y.mix(DOM, {
      * @param {HTMLElement} element The first element 
      * @param {HTMLElement | Object} element2 The element or region to check the interect with
      * @param {Object} altRegion An object literal containing the region for the first element if we already have the data (for performance i.e. DragDrop)
-     @return {Object} Object literal containing the following intersection data: (top, right, bottom, left, area, yoff, xoff, inRegion)
+     * @return {Object} Object literal containing the following intersection data: (top, right, bottom, left, area, yoff, xoff, inRegion)
      */
     intersect: function(node, node2, altRegion) {
         var r = altRegion || DOM.region(node), region = {},
@@ -10291,6 +10312,9 @@ Event._interval = setInterval(Event._poll, Event.POLL_INTERVAL);
          */
         _unload: function(e) {
             Y.each(_wrappers, function(v, k) {
+                if (v.type == 'unload') {
+                    v.fire(e);
+                }
                 v.detachAll();
                 remove(v.el, v.type, v.fn, v.capture);
                 delete _wrappers[k];
@@ -10863,7 +10887,7 @@ YUI.add('node-base', function(Y) {
 /**
  * The Node class provides a wrapper for manipulating DOM Nodes.
  * Node properties can be accessed via the set/get methods.
- * Use Y.get() to retrieve Node instances.
+ * Use Y.one() to retrieve Node instances.
  *
  * <strong>NOTE:</strong> Node properties are accessed using
  * the <code>set</code> and <code>get</code> methods.
@@ -11810,6 +11834,7 @@ Y.mix(Y_Node.prototype, {
      */
     appendTo: function(node) {
         Y.one(node).append(this);
+        return this;
     },
 
     /**
@@ -12889,6 +12914,8 @@ Y.Node.prototype.focus = function () {
         this._node.focus();
     } catch (e) {
     }
+
+    return this;
 };
 
 // IE throws error when setting input.type = 'hidden',
@@ -13032,7 +13059,7 @@ Y.Array.each(ArrayMethods, function(name) {
             i = 0,
             arg;
 
-        while ((arg = arguments[i++])) { // use DOM nodes/nodeLists 
+        while (typeof (arg = arguments[i++]) != 'undefined') { // use DOM nodes/nodeLists 
             args.push(arg._node || arg._nodes || arg);
         }
         return Y.Node.scrubVal(ArrayProto[name].apply(this._nodes, args));
@@ -13467,7 +13494,7 @@ Y.Node.prototype.delegate = function(type) {
 }, '@VERSION@' ,{requires:['node-base', 'event-delegate']});
 
 
-YUI.add('node', function(Y){}, '@VERSION@' ,{skinnable:false, requires:['dom', 'event-base', 'event-delegate', 'pluginhost'], use:['node-base', 'node-style', 'node-screen', 'node-pluginhost', 'node-event-delegate']});
+YUI.add('node', function(Y){}, '@VERSION@' ,{requires:['dom', 'event-base', 'event-delegate', 'pluginhost'], use:['node-base', 'node-style', 'node-screen', 'node-pluginhost', 'node-event-delegate'], skinnable:false});
 
 YUI.add('event-delegate', function(Y) {
 
@@ -13557,7 +13584,7 @@ function delegate(type, fn, el, filter) {
 
     if (typeBits.length > 1) {
         cat  = typeBits.shift();
-        type = typeBits.shift();
+        args[0] = type = typeBits.shift();
     }
 
     synth = Y.Node.DOM_EVENTS[type];
@@ -13949,6 +13976,7 @@ YUI.add('io-base', function(Y) {
         }
         else {
             o.c = {};
+			o.t = 'io:iframe';
         }
 
         return o;
@@ -14164,7 +14192,7 @@ YUI.add('io-base', function(Y) {
         _destroy(o);
         c.xdr.use = 'flash';
         // If the original request included serialized form data and
-        // additional data are defined in configuration.data, it must
+        // additional data are defined in the configuration, it must
         // be reset to prevent data duplication.
         c.data = c.form && d ? d : null;
 
@@ -14182,7 +14210,7 @@ YUI.add('io-base', function(Y) {
     * @return int
     */
     function _concat(s, d) {
-        s += ((s.indexOf('?') == -1) ? '?' : '&') + d;
+        s += (s.indexOf('?') === -1 ? '?' : '&') + d;
         return s;
     }
 
@@ -14223,16 +14251,6 @@ YUI.add('io-base', function(Y) {
 
         for (p in _headers) {
             if (_headers.hasOwnProperty(p)) {
-				/*
-                if (h[p]) {
-                    // Configuration headers will supersede preset io headers,
-                    // if headers match.
-                    continue;
-                }
-                else {
-                    h[p] = _headers[p];
-                }
-				*/
 				if (!h[p]) {
 					h[p] = _headers[p];
 				}
@@ -14312,7 +14330,7 @@ YUI.add('io-base', function(Y) {
         var status;
 
         try {
-			status = (o.c.status && o.c.status !== 0) ? o.c.status : 0;
+			status = (o.c && o.c.status !== 0) ? o.c.status : 0;
         }
         catch(e) {
             status = 0;
@@ -14449,11 +14467,9 @@ YUI.add('io-base', function(Y) {
             s = c.sync;
             oD = c.data;
 
-        //To serialize an object into a key-value string, add the
-        //QueryString module to the YUI instance's 'use' method.
-        if (Y.Lang.isObject(c.data) && Y.QueryString) {
-            c.data = Y.QueryString.stringify(c.data);
-        }
+        // Serialize an object into a key-value string using
+        // querystring-stringify-simple.
+		c.data = (Y.Lang.isObject(c.data) && Y.QueryString) ? Y.QueryString.stringify(c.data) : c.data;
 
         if (c.form) {
             if (c.form.upload) {
@@ -14462,7 +14478,7 @@ YUI.add('io-base', function(Y) {
                 return Y.io.upload(o, uri, c);
             }
             else {
-                // Serialize HTML form data.
+                // Serialize HTML form data into a key-value string.
                 f = Y.io._serialize(c.form, c.data);
                 if (m === 'POST' || m === 'PUT') {
                     c.data = f;
@@ -14473,13 +14489,21 @@ YUI.add('io-base', function(Y) {
             }
         }
 
-        if (c.data && m === 'GET') {
-            uri = _concat(uri, c.data);
-        }
-
-        if (c.data && m === 'POST') {
-            c.headers = Y.merge({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, c.headers);
-        }
+		if (c.data) {
+			switch (m) {
+				case 'GET':
+				case 'DELETE':
+					uri = _concat(uri, c.data);
+					break;
+				case 'POST':
+				case 'PUT':
+					// If Content-Type is defined in the configuration object, or
+					// or as a default header, it will be used instead of
+					// 'application/x-www-form-urlencoded; charset=UTF-8'
+					c.headers = Y.merge({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, c.headers);
+					break;
+			}
+		}
 
         if (o.t) {
             return Y.io.xdr(uri, o, c);
@@ -14490,50 +14514,56 @@ YUI.add('io-base', function(Y) {
         }
 
         try {
+			// Determine if request is to be set as
+			// synchronous or asynchronous.
             o.c.open(m, uri, s ? false : true);
+			_setHeaders(o.c, c.headers);
+			_ioStart(o.id, c);
+
             // Will work only in browsers that implement the
             // Cross-Origin Resource Sharing draft.
             if (c.xdr && c.xdr.credentials) {
-                o.c.withCredentials = true;
+				if (!Y.UA.ie) {
+					o.c.withCredentials = true;
+				}
             }
-        }
-        catch(e1) {
-            if (c.xdr) {
-                // This exception is usually thrown by browsers
-                // that do not support native XDR transactions.
-                return _resend(o, u, c, oD);
-            }
-        }
 
-        _setHeaders(o.c, c.headers);
-        _ioStart(o.id, c);
-        try {
             // Using "null" with HTTP POST will  result in a request
             // with no Content-Length header defined.
             o.c.send(c.data || '');
+
             if (s) {
+				// Create a response object for synchronous transactions.
                 d = o.c;
                 a  = ['status', 'statusText', 'responseText', 'responseXML'];
                 r = c.arguments ? { id: o.id, arguments: c.arguments } : { id: o.id };
+                r.getAllResponseHeaders = function() { return d.getAllResponseHeaders(); };
+                r.getResponseHeader = function(h) { return d.getResponseHeader(h); };
 
                 for (j = 0; j < 4; j++) {
                     r[a[j]] = o.c[a[j]];
                 }
 
-                r.getAllResponseHeaders = function() { return d.getAllResponseHeaders(); };
-                r.getResponseHeader = function(h) { return d.getResponseHeader(h); };
                 _ioComplete(o, c);
                 _handleResponse(o, c);
 
                 return r;
             }
         }
-        catch(e2) {
-            if (c.xdr) {
+        catch(e) {
+            if (c.xdr && c.xdr.use === 'native') {
                 // This exception is usually thrown by browsers
-                // that do not support native XDR transactions.
+                // that do not support XMLHttpRequest Level 2.
+				// Retry the request with the XDR transport set
+				// to 'flash'.  If the Flash transport is not
+				// initialized or available, the transaction
+				// will resolve to a transport error.
                 return _resend(o, u, c, oD);
             }
+			else {
+                _ioComplete(o, c);
+				_handleResponse(o, c);
+			}
         }
 
         // If config.timeout is defined, and the request is standard XHR,
@@ -15481,7 +15511,7 @@ Y.Node.prototype.toggleView = function(name, on) {
     if (on) {
         this._show();
     }  else {
-        callback = _wrapCallBack(anim, this._hide);
+        callback = _wrapCallBack(this, this._hide);
     }
 
     this._toggles[name] = on;
@@ -15549,7 +15579,7 @@ Y.mix(Transition.fx, {
 });
 
 Y.mix(Transition.toggles, {
-    size: ['sizeIn', 'sizeOut'],
+    size: ['sizeOut', 'sizeIn'],
     fade: ['fadeOut', 'fadeIn']
 });
 
