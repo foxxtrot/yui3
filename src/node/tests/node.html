@@ -1871,6 +1871,22 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
         }
         
     })); 
+
+    // I can't think of any generic case that covers all A-grade browsers, but
+    // the issue being tested by the following suite probably rears it's head
+    // elsewhere.
+    if(window.FileList) {
+        suite.add( new Y.Test.Case({
+            name: 'FileList',
+
+            'FileList returned by get should be a FileList': function() {
+                var input = Y.Node.create('<input type="file" />'),
+                    fileList = input.get('files');
+                Assert.isNotNull(fileList);
+                Assert.isInstanceOf(window.FileList, fileList);
+            }
+        }));
+    }
     Y.Test.Runner.add(suite);
 
     Y.on('load', function() {
