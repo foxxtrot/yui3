@@ -115,7 +115,8 @@
         initializer: function(cfg) {
             this._handles = [];
             //Create a tmp DD instance under the hood.
-            var conf = Y.clone(this.get('dragConfig') || {}),
+            //var conf = Y.clone(this.get('dragConfig') || {}),
+            var conf = this.get('dragConfig') || {},
                 cont = this.get(CONT);
 
             conf.node = _tmpNode.cloneNode(true);
@@ -309,7 +310,7 @@
         * @for DDM
         * @method getDelegate
         * @description Get a delegate instance from a container node
-        * @returns Y.DD.Delegate
+        * @return Y.DD.Delegate
         */
         getDelegate: function(node) {
             var del = null;
@@ -325,4 +326,5 @@
 
     Y.namespace('DD');    
     Y.DD.Delegate = Delegate;
+
 

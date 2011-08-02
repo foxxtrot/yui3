@@ -82,8 +82,6 @@ Y.mix(Y.namespace('AutoCompleteHighlighters'), {
      * @static
      */
     subWordMatchFold: function (query, results) {
-        if (query === '') { return results; }
-
         var queryWords = Y.Text.WordBreak.getUniqueWords(query);
 
         return YArray.map(results, function (result) {

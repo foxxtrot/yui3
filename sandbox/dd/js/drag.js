@@ -23,80 +23,80 @@ YUI.add('dd-drag', function(Y) {
         * @event drag:mouseup
         * @description Handles the mouseup DOM event, does nothing internally just fires.
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         /**
         * @event drag:mouseDown
         * @description Handles the mousedown DOM event, checks to see if you have a valid handle then starts the drag timers.
         * @preventable _defMouseDownFn
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl><dt>ev</dt><dd>The original mousedown event.</dd></dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_MOUSE_DOWN = 'drag:mouseDown',
         /**
         * @event drag:afterMouseDown
         * @description Fires after the mousedown event has been cleared.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl><dt>ev</dt><dd>The original mousedown event.</dd></dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_AFTER_MOUSE_DOWN = 'drag:afterMouseDown',
         /**
         * @event drag:removeHandle
         * @description Fires after a handle is removed.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl><dt>handle</dt><dd>The handle that was removed.</dd></dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_REMOVE_HANDLE = 'drag:removeHandle',
         /**
         * @event drag:addHandle
         * @description Fires after a handle is added.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl><dt>handle</dt><dd>The handle that was added.</dd></dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_ADD_HANDLE = 'drag:addHandle',
         /**
         * @event drag:removeInvalid
         * @description Fires after an invalid selector is removed.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl><dt>handle</dt><dd>The handle that was removed.</dd></dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_REMOVE_INVALID = 'drag:removeInvalid',
         /**
         * @event drag:addInvalid
         * @description Fires after an invalid selector is added.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl><dt>handle</dt><dd>The handle that was added.</dd></dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_ADD_INVALID = 'drag:addInvalid',
         /**
         * @event drag:start
         * @description Fires at the start of a drag operation.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>pageX</dt><dd>The original node position X.</dd>
         * <dt>pageY</dt><dd>The original node position Y.</dd>
         * <dt>startTime</dt><dd>The startTime of the event. getTime on the current Date object.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_START = 'drag:start',
         /**
         * @event drag:end
         * @description Fires at the end of a drag operation.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>pageX</dt><dd>The current node position X.</dd>
         * <dt>pageY</dt><dd>The current node position Y.</dd>
@@ -104,13 +104,13 @@ YUI.add('dd-drag', function(Y) {
         * <dt>endTime</dt><dd>The endTime of the event. getTime on the current Date object.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_END = 'drag:end',
         /**
         * @event drag:drag
         * @description Fires every mousemove during a drag operation.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>pageX</dt><dd>The current node position X.</dd>
         * <dt>pageY</dt><dd>The current node position Y.</dd>
@@ -118,76 +118,76 @@ YUI.add('dd-drag', function(Y) {
         * <dt>info</dt><dd>Object hash containing calculated XY arrays: start, xy, delta, offset</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_DRAG = 'drag:drag',
         /**
         * @event drag:align
         * @preventable _defAlignFn
         * @description Fires when this node is aligned.
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>pageX</dt><dd>The current node position X.</dd>
         * <dt>pageY</dt><dd>The current node position Y.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         EV_ALIGN = 'drag:align',
         /**
         * @event drag:over
         * @description Fires when this node is over a Drop Target. (Fired from dd-drop)
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>drop</dt><dd>The drop object at the time of the event.</dd>
         * <dt>drag</dt><dd>The drag object at the time of the event.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         /**
         * @event drag:enter
         * @description Fires when this node enters a Drop Target. (Fired from dd-drop)
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>drop</dt><dd>The drop object at the time of the event.</dd>
         * <dt>drag</dt><dd>The drag object at the time of the event.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         /**
         * @event drag:exit
         * @description Fires when this node exits a Drop Target. (Fired from dd-drop)
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>drop</dt><dd>The drop object at the time of the event.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         /**
         * @event drag:drophit
         * @description Fires when this node is dropped on a valid Drop Target. (Fired from dd-ddm-drop)
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>drop</dt><dd>The best guess on what was dropped on.</dd>
         * <dt>drag</dt><dd>The drag object at the time of the event.</dd>
         * <dt>others</dt><dd>An array of all the other drop targets that was dropped on.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
         /**
         * @event drag:dropmiss
         * @description Fires when this node is dropped on an invalid Drop Target. (Fired from dd-ddm-drop)
-        * @param {Event.Facade} event An Event Facade object with the following specific property added:
+        * @param {EventFacade} event An Event Facade object with the following specific property added:
         * <dl>
         * <dt>pageX</dt><dd>The current node position X.</dd>
         * <dt>pageY</dt><dd>The current node position Y.</dd>
         * </dl>
         * @bubbles DDM
-        * @type {Event.Custom}
+        * @type {CustomEvent}
         */
     
     Drag = function(o) {
@@ -217,6 +217,9 @@ YUI.add('dd-drag', function(Y) {
         */
         node: {
             setter: function(node) {
+                if (this._canDrag(node)) {
+                    return node;
+                }
                 var n = Y.one(node);
                 if (!n) {
                     Y.error('DD.Drag: Invalid Node Given: ' + node);
@@ -231,6 +234,9 @@ YUI.add('dd-drag', function(Y) {
         */
         dragNode: {
             setter: function(node) {
+                if (this._canDrag(node)) {
+                    return node;
+                }
                 var n = Y.one(node);
                 if (!n) {
                     Y.error('DD.Drag: Invalid dragNode Given: ' + node);
@@ -433,6 +439,21 @@ YUI.add('dd-drag', function(Y) {
 
     Y.extend(Drag, Y.Base, {
         /**
+        * Checks the object for the methods needed to drag the object around. 
+        * Normally this would be a node instance, but in the case of Graphics, it
+        * may be an SVG node or something similar.
+        * @method _canDrag
+        * @private
+        * @param {Object} n The object to check
+        * @return {Boolean} True or false if the Object contains the methods needed to Drag
+        */
+        _canDrag: function(n) {
+            if (n && n.setXY && n.getXY && n.test && n.contains) {
+                return true;
+            }
+            return false;
+        },
+        /**
         * @private
         * @property _bubbleTargets
         * @description The default bubbleTarget for this object. Default: Y.DD.DDM
@@ -472,8 +493,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _handleTarget
         * @description Attribute handler for the target config attribute.
-        * @param {Boolean/Object}
-        * @return {Boolean/Object}
+        * @param {Boolean/Object} config The Config
         */
         _handleTarget: function(config) {
             if (Y.DD.Drop) {
@@ -572,7 +592,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @property _ev_md
         * @description A private reference to the mousedown DOM event
-        * @type {Event.Facade}
+        * @type {EventFacade}
         */
         _ev_md: null,
         /**
@@ -683,7 +703,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _handleMouseUp
         * @description Handler for the mouseup DOM event
-        * @param {Event.Facade}
+        * @param {EventFacade} ev The Event
         */
         _handleMouseUp: function(ev) {
             this.fire('drag:mouseup');
@@ -696,6 +716,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _fixDragStart
         * @description The function we use as the ondragstart handler when we start a drag in Internet Explorer. This keeps IE from blowing up on images as drag handles.
+        * @param {Event} e The Event
         */
         _fixDragStart: function(e) {
             e.preventDefault();
@@ -739,7 +760,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _handleMouseDownEvent
         * @description Handler for the mousedown DOM event
-        * @param {Event.Facade}
+        * @param {EventFacade} ev  The Event
         */
         _handleMouseDownEvent: function(ev) {
             this.fire(EV_MOUSE_DOWN, { ev: ev });
@@ -748,7 +769,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _defMouseDownFn
         * @description Handler for the mousedown DOM event
-        * @param {Event.Facade}
+        * @param {EventFacade} e  The Event
         */
         _defMouseDownFn: function(e) {
             var ev = e.ev;
@@ -780,7 +801,7 @@ YUI.add('dd-drag', function(Y) {
         /**
         * @method validClick
         * @description Method first checks to see if we have handles, if so it validates the click against the handle. Then if it finds a valid handle, it checks it against the invalid handles list. Returns true if a good handle was used, false otherwise.
-        * @param {Event.Facade}
+        * @param {EventFacade} ev  The Event
         * @return {Boolean}
         */
         validClick: function(ev) {
@@ -1097,7 +1118,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _defAlignFn
         * @description Calculates the offsets and set's the XY that the element will move to.
-        * @param {Event.Facade} e The drag:align event.
+        * @param {EventFacade} e The drag:align event.
         */
         _defAlignFn: function(e) {
             this.actXY = [e.pageX - this.deltaXY[0], e.pageY - this.deltaXY[1]];
@@ -1158,7 +1179,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _defDragFn
         * @description Default function for drag:drag. Fired from _moveNode.
-        * @param {Event.Facade} ev The drag:drag event
+        * @param {EventFacade} ev The drag:drag event
         */
         _defDragFn: function(e) {
             if (this.get('move')) {
@@ -1174,7 +1195,7 @@ YUI.add('dd-drag', function(Y) {
         * @private
         * @method _move
         * @description Fired from DragDropMgr (DDM) on mousemove.
-        * @param {Event.Facade} ev The mousemove DOM event
+        * @param {EventFacade} ev The mousemove DOM event
         */
         _move: function(ev) {
             if (this.get('lock')) {
@@ -1225,7 +1246,6 @@ YUI.add('dd-drag', function(Y) {
     });
     Y.namespace('DD');    
     Y.DD.Drag = Drag;
-
 
 
 }, '@VERSION@' ,{requires:['dd-ddm-base'], skinnable:false});

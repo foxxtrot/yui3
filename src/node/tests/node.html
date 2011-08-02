@@ -185,6 +185,21 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
     suite.add( new Y.Test.Case({
         name: 'Y.Node Instance',
 
+        'should cache node': function() {
+            var node = Y.Node.create('<div id="test-caching" />');
+            node.appendTo('body');
+            Assert.areEqual(node, Y.Node._instances[node._yuid]);
+            Assert.areEqual(Y.one('#test-caching'), node);
+            node.remove(true);
+        },
+
+        'should get fresh node after destroy': function() {
+            var node = Y.Node.create('<div id="test-caching2" />');
+            node.appendTo('body');
+            node.destroy();
+            Assert.areNotEqual(Y.one('#test-caching2'), node);
+        },
+
         test_get: function() {
             var node = Y.one('#test-nodes'),
                 nodes = Y.all('#test-nodes *');
@@ -1012,6 +1027,12 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
             // ensure remove doesnt fail when no parent
             node = Y.Node.create('<div/>');
             node.remove();
+
+            // or after destroy
+            node = Y.Node.create('<div/>');
+            node.appendTo('body');
+            node.destroy();
+            node.remove();
         },
 
         test_replace: function() {
@@ -1382,6 +1403,11 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
             Assert.areEqual('', select.get('value'));
         },
 
+        test_label_for: function() {
+            var label = Y.Node.create('<label for="foo">');
+            Assert.areEqual('foo', label.get('for'));
+        },
+
         test_destroy: function() {
             var node = Y.Node.create('<div><em>foo</em><strong>bar</strong></div>');
                 nodes = node.all('em, strong');
@@ -1673,15 +1699,24 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
         'should fire the handler once': function() {
             var i = 0,
                 test = this,
-                node = Y.all('body');
+                nodelist = Y.all('body');
 
-            node.once('click', function() {
+            nodelist.once('click', function() {
                 i++;
                 Assert.areEqual(1, i);
             });
 
-            node.item(0).simulate('click');
-            node.item(0).simulate('click');
+            nodelist.item(0).simulate('click');
+            nodelist.item(0).simulate('click');
+
+            i = 0;
+            nodelist.onceAfter('click', function () {
+                i++;
+                Assert.areEqual(1, i);
+            });
+
+            nodelist.item(0).simulate('click');
+            nodelist.item(0).simulate('click');
         },
 
         'should pop the nodelist': function() {
@@ -1746,6 +1781,21 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
             ArrayAssert.itemsAreEqual(nodelist1._nodes.concat(Y.one('ul')._node, Y.one('li')._node), nodelist2._nodes);
         },
 
+        'should return nodelist from empty concat': function() {
+            var nodelist = Y.Node.create('<div></div>').get('childNodes');
+            ArrayAssert.itemsAreEqual([], nodelist.concat()._nodes);
+        },
+
+        'should return nodelist from empty slice': function() {
+            var nodelist = Y.Node.create('<div></div>').get('childNodes');
+            ArrayAssert.itemsAreEqual([], nodelist.slice()._nodes);
+        },
+
+        'should return nodelist from empty splice': function() {
+            var nodelist = Y.Node.create('<div></div>').get('childNodes');
+            ArrayAssert.itemsAreEqual([], nodelist.splice()._nodes);
+        },
+
         'should slice the nodes': function() {
             var nodelist1 = Y.all('div');
                 nodelist2 = nodelist1.slice(1, 4);
@@ -1769,6 +1819,15 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
             var node = Y.Node.create('<div><span><em>foo</em></span><strong>bar</strong></div>');
             node.empty();
             Assert.areEqual(0, node.get('childNodes').size());
+        },
+
+        'should empty the node and recursively destroy': function() {
+            var node = Y.Node.create('<div><span><em>foo</em></span><strong>bar</strong></div>'),
+                node2 = node.one('em');
+
+            Assert.areEqual(node2, node.one('em'));
+            node.empty(true);
+            Assert.areNotEqual(node2, node.one('em'));
         },
 
         'should empty the nodelist': function() {
@@ -1849,6 +1908,23 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
             node.destroy(true);
 
             Assert.isUndefined(Y.one('#test-nodes ul')._bar);
+        },
+
+        'should return the DOM node': function() {
+            var node = document.getElementById('test-nodes');
+
+            Assert.areEqual(node, Y.one('#test-nodes').getDOMNode());
+        },
+
+        'should return the DOM nodes': function() {
+            var nodes = document.getElementsByTagName('input');
+
+            ArrayAssert.itemsAreEqual(nodes, Y.all(nodes).getDOMNodes());
+        },
+
+        'should not cache document fragment': function() {
+            var node = Y.Node.create('<div>foo</div><div>bar</div>');
+            Assert.isUndefined(Y.Node._instances[node._yuid]);
         }
     })); 
 
@@ -1872,21 +1948,42 @@ YUI({base: '../../../build/', filter: 'raw'}).use('selector-css3', 'node-depreca
         
     })); 
 
-    // I can't think of any generic case that covers all A-grade browsers, but
-    // the issue being tested by the following suite probably rears it's head
-    // elsewhere.
-    if(window.FileList) {
-        suite.add( new Y.Test.Case({
-            name: 'FileList',
+    suite.add( new Y.Test.Case({
+        name: 'new Y.Node()',
 
-            'FileList returned by get should be a FileList': function() {
-                var input = Y.Node.create('<input type="file" />'),
-                    fileList = input.get('files');
-                Assert.isNotNull(fileList);
-                Assert.isInstanceOf(window.FileList, fileList);
-            }
-        }));
-    }
+        'should generate a fresh instance': function() {
+            Assert.areNotEqual(Y.one('body'), Y.Node('body'));
+        },
+
+        'compareTo should pass': function() {
+            Assert.isTrue(Y.one('body').compareTo(Y.Node('body')));
+        }
+    })); 
+
+    suite.add( new Y.Test.Case({
+        name: 'NodeList API',
+
+        'should have the create API': function() {
+            Assert.isTrue(typeof Y.all('body').append == 'function');
+            Assert.isTrue(typeof Y.all('body').prepend == 'function');
+            Assert.isTrue(typeof Y.all('body').insert == 'function');
+            Assert.isTrue(typeof Y.all('body').setContent == 'function');
+            Assert.isTrue(typeof Y.all('body').appendChild == 'function');
+        },
+
+        'should have the view API': function() {
+            Assert.isTrue(typeof Y.all('body').hide == 'function');
+            Assert.isTrue(typeof Y.all('body').show == 'function');
+            Assert.isTrue(typeof Y.all('body').toggleView == 'function');
+        },
+
+        'should have the event API': function() {
+            Assert.isTrue(typeof Y.all('body').on == 'function');
+            Assert.isTrue(typeof Y.all('body').after == 'function');
+            Assert.isTrue(typeof Y.all('body').detach == 'function');
+            Assert.isTrue(typeof Y.all('body').detachAll == 'function');
+        }
+    })); 
     Y.Test.Runner.add(suite);
 
     Y.on('load', function() {

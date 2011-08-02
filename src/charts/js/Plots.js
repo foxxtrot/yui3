@@ -19,6 +19,10 @@ function Plots(cfg)
 
 Plots.prototype = {
     /**
+     * Storage for default marker styles.
+     *
+     * @property _plotDefaults
+     * @type Object
      * @private
      */
     _plotDefaults: null,
@@ -35,7 +39,8 @@ Plots.prototype = {
 		{
 			return;
 		}
-        var style = Y.clone(this.get("styles").marker),
+        var isNumber = Y.Lang.isNumber,
+            style = Y.clone(this.get("styles").marker),
             w = style.width,
             h = style.height,
             xcoords = this.get("xcoords"),
@@ -49,9 +54,7 @@ Plots.prototype = {
             offsetHeight = h/2,
             fillColors = null,
             borderColors = null,
-            graphOrder = this.get("graphOrder"),
-            hotspot,
-            isChrome = ISCHROME;
+            graphOrder = this.get("graphOrder");
         if(Y.Lang.isArray(style.fill.color))
         {
             fillColors = style.fill.color.concat(); 
@@ -61,18 +64,13 @@ Plots.prototype = {
             borderColors = style.border.colors.concat();
         }
         this._createMarkerCache();
-        if(isChrome)
-        {
-            this._createHotspotCache();
-        }
         for(; i < len; ++i)
         {
-            top = (ycoords[i] - offsetHeight);
-            left = (xcoords[i] - offsetWidth);            
-            if(!top || !left || top === undefined || left === undefined || top == "undefined" || left == "undefined" || isNaN(top) || isNaN(left))
+            top = parseFloat(ycoords[i] - offsetHeight);
+            left = parseFloat(xcoords[i] - offsetWidth);            
+            if(!isNumber(left) || !isNumber(top))
             {
                 this._markers.push(null);
-                this._graphicNodes.push(null);
                 continue;
             }
             if(fillColors)
@@ -83,25 +81,17 @@ Plots.prototype = {
             {
                 style.border.colors = borderColors[i % borderColors.length];
             }
+
+            style.x = left;
+            style.y = top;
             marker = this.getMarker(style, graphOrder, i);
-            marker.setPosition(left, top);
-            if(isChrome)
-            {
-                hotspot = this.getHotspot(style, graphOrder, i);
-                hotspot.setPosition(left, top);
-                hotspot.parentNode.style.zIndex = 5;
-            }
         }
         this._clearMarkerCache();
-        if(isChrome)
-        {
-            this._clearHotspotCache();
-        }
     },
 
     /**
      * Gets the default values for series that use the utility. This method is used by
-     * the class' <code>styles</code> attribute's getter to get build default values.
+     * the class' `styles` attribute's getter to get build default values.
      *
      * @method _getPlotDefaults
      * @return Object
@@ -133,6 +123,8 @@ Plots.prototype = {
     /**
      * Collection of markers to be used in the series.
      *
+     * @property _markers
+     * @type Array
      * @private
      */
     _markers: null,
@@ -140,10 +132,12 @@ Plots.prototype = {
     /**
      * Collection of markers to be re-used on a series redraw.
      *
+     * @property _markerCache
+     * @type Array
      * @private
      */
     _markerCache: null,
-    
+   
     /**
      * Gets and styles a marker. If there is a marker in cache, it will use it. Otherwise
      * it will create one.
@@ -157,7 +151,13 @@ Plots.prototype = {
      */
     getMarker: function(styles, order, index)
     {
-        var marker;
+        var marker,
+            border = styles.border;
+        styles.id = "series_" + order + "_" + index;
+        //fix name differences between graphic layer
+        border.opacity = border.alpha;
+        styles.stroke = border;
+        styles.fill.opacity = styles.fill.alpha;
         if(this._markerCache.length > 0)
         {
             while(!marker)
@@ -170,14 +170,13 @@ Plots.prototype = {
                 marker = this._markerCache.shift();
 
             }
-            marker.update(styles);
+            marker.set(styles);
         }
         else
         {
             marker = this._createMarker(styles, order, index);
         }
         this._markers.push(marker);
-        this._graphicNodes.push(marker.parentNode);
         return marker;
     },   
     
@@ -193,15 +192,13 @@ Plots.prototype = {
      */
     _createMarker: function(styles, order, index)
     {
-        var graphic = new Y.Graphic(),
+        var graphic = this.get("graphic"),
             marker,
             cfg = Y.clone(styles);
-        graphic.render(this.get("graph").get("contentBox"));
-        graphic.node.setAttribute("id", "markerParent_" + order + "_" + index);
-        cfg.graphic = graphic;
-        marker = new Y.Shape(cfg); 
+        graphic.set("autoDraw", false);
+        cfg.type = cfg.shape;
+        marker = graphic.addShape(cfg); 
         marker.addClass("yui3-seriesmarker");
-        marker.node.setAttribute("id", "series_" + order + "_" + index);
         return marker;
     },
     
@@ -222,9 +219,35 @@ Plots.prototype = {
             this._markerCache = [];
         }
         this._markers = [];
-        this._graphicNodes = [];
     },
     
+    /**
+     * Toggles visibility
+     *
+     * @method _toggleVisible
+     * @param {Boolean} visible indicates visibilitye
+     * @private
+     */
+    _toggleVisible: function(visible)
+    {
+        var marker,
+            markers = this.get("markers"),
+            i = 0,
+            len;
+        if(markers)
+        {
+            len = markers.length;
+            for(; i < len; ++i)
+            {
+                marker = markers[i];
+                if(marker)
+                {
+                    marker.set("visible", visible);
+                }
+            }
+        }
+    },
+
     /**
      * Removes unused markers from the marker cache
      *
@@ -235,18 +258,15 @@ Plots.prototype = {
     {
         var len = this._markerCache.length,
             i = 0,
-            graphic,
             marker;
-        for(; i < len; ++i)
+        while(this._markerCache.length > 0)
         {
-            marker = this._markerCache[i];
+            marker = this._markerCache.shift();
             if(marker)
             {
-                graphic = marker.graphics;
-                graphic.destroy();
+                marker.destroy();
             }
         }
-        this._markerCache = [];
     },
 
     /**
@@ -263,22 +283,21 @@ Plots.prototype = {
         {
             var w,
                 h,
-                markerStyles,
                 styles = Y.clone(this.get("styles").marker),
                 state = this._getState(type),
                 xcoords = this.get("xcoords"),
                 ycoords = this.get("ycoords"),
                 marker = this._markers[i],
-                graphicNode = marker.parentNode;
                 markerStyles = state == "off" || !styles[state] ? styles : styles[state]; 
                 markerStyles.fill.color = this._getItemColor(markerStyles.fill.color, i);
                 markerStyles.border.color = this._getItemColor(markerStyles.border.color, i);
-                marker.update(markerStyles);
+                markerStyles.stroke = markerStyles.border;
+                marker.set(markerStyles);
                 w = markerStyles.width;
                 h = markerStyles.height;
-                graphicNode.style.left = (xcoords[i] - w/2) + "px";
-                graphicNode.style.top = (ycoords[i] - h/2) + "px";
-                marker.toggleVisible(this.get("visible"));
+                marker.set("x", (xcoords[i] - w/2));
+                marker.set("y",  (ycoords[i] - h/2));
+                marker.set("visible", this.get("visible"));
         }
     },
 
@@ -301,7 +320,7 @@ Plots.prototype = {
     },
 
     /**
-     * Method used by <code>styles</code> setter. Overrides base implementation.
+     * Method used by `styles` setter. Overrides base implementation.
      *
      * @method _setStyles
      * @param {Object} newStyles Hash of properties to update.
@@ -318,6 +337,8 @@ Plots.prototype = {
      * Combines new styles with existing styles.
      *
      * @method _parseMarkerStyles
+     * @param {Object} Object containing style properties for the marker.
+     * @return Object
      * @private
      */
     _parseMarkerStyles: function(val)
@@ -368,135 +389,11 @@ Plots.prototype = {
     },
     
     /**
+     * @property _statSyles
+     * @type Object
      * @private
      */
-    _stateSyles: null,
-
-    /**
-     * Collection of hotspots to be used in the series.
-     *
-     * @private
-     */
-    _hotspots: null,
-
-    /**
-     * Collection of hotspots to be re-used on a series redraw.
-     *
-     * @private
-     */
-    _hotspotCache: null,
-    
-    /**
-     * Gets and styles a hotspot. If there is a hotspot in cache, it will use it. Otherwise
-     * it will create one.
-     *
-     * @method getHotspot
-     * @param {Object} styles Hash of style properties.
-     * @param {Number} order Order of the series.
-     * @param {Number} index Index within the series associated with the hotspot.
-     * @return Shape
-     * @protected
-     */
-    getHotspot: function(hotspotStyles, order, index)
-    {
-        var hotspot,
-            styles = Y.clone(hotspotStyles);
-        styles.fill = {
-            type: "solid",
-            color: "#000",
-            alpha: 0
-        };
-        styles.border = {
-            weight: 0
-        };
-        if(this._hotspotCache.length > 0)
-        {
-            while(!hotspot)
-            {
-                if(this._hotspotCache.length < 1)
-                {
-                    hotspot = this._createHotspot(styles, order, index);
-                    break;
-                }
-                hotspot = this._hotspotCache.shift();
-
-            }
-            hotspot.update(styles);
-        }
-        else
-        {
-            hotspot = this._createHotspot(styles, order, index);
-        }
-        this._hotspots.push(hotspot);
-        return hotspot;
-    },   
-    
-    /**
-     * Creates a shape to be used as a hotspot.
-     *
-     * @method _createHotspot
-     * @param {Object} styles Hash of style properties.
-     * @param {Number} order Order of the series.
-     * @param {Number} index Index within the series associated with the hotspot.
-     * @return Shape
-     * @private
-     */
-    _createHotspot: function(styles, order, index)
-    {
-        var graphic = new Y.Graphic(),
-            hotspot,
-            cfg = Y.clone(styles);
-        graphic.render(this.get("graph").get("contentBox"));
-        graphic.node.setAttribute("id", "hotspotParent_" + order + "_" + index);
-        cfg.graphic = graphic;
-        hotspot = new Y.Shape(cfg); 
-        hotspot.addClass("yui3-seriesmarker");
-        hotspot.node.setAttribute("id", "hotspot_" + order + "_" + index);
-        return hotspot;
-    },
-    
-    /**
-     * Creates a cache of hotspots for reuse.
-     *
-     * @method _createHotspotCache
-     * @private
-     */
-    _createHotspotCache: function()
-    {
-        if(this._hotspots && this._hotspots.length > 0)
-        {
-            this._hotspotCache = this._hotspots.concat();
-        }
-        else
-        {
-            this._hotspotCache = [];
-        }
-        this._hotspots = [];
-    },
-    
-    /**
-     * Removes unused hotspots from the hotspot cache
-     *
-     * @method _clearHotspotCache
-     * @private
-     */
-    _clearHotspotCache: function()
-    {
-        var len = this._hotspotCache.length,
-            i = 0,
-            graphic,
-            hotspot;
-        for(; i < len; ++i)
-        {
-            hotspot = this._hotspotCache[i];
-            if(hotspot)
-            {
-                graphic = hotspot.graphics;
-                graphic.destroy();
-            }
-        }
-        this._hotspotCache = [];
-    }
+    _stateSyles: null
 };
 
 Y.augment(Plots, Y.Attribute);

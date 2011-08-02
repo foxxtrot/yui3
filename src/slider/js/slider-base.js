@@ -77,7 +77,9 @@ Y.SliderBase = Y.extend( SliderBase, Y.Widget, {
          *      <dt>offset</dt>
          *          <dd>Pixel offset from top/left of the slider to the new
          *          thumb position</dd>
-         *      <dt>ddEvent</dt>
+         *      <dt>ddEvent (deprecated)</dt>
+         *          <dd><code>drag:drag</code> event from the thumb</dd>
+         *      <dt>originEvent</dt>
          *          <dd><code>drag:drag</code> event from the thumb</dd>
          *  </dl>
          */
@@ -272,11 +274,16 @@ Y.SliderBase = Y.extend( SliderBase, Y.Widget, {
          * @param event {Event} The event object for the slideStart with the
          *                      following extra properties:
          *  <dl>
-         *      <dt>ddEvent</dt>
+         *      <dt>ddEvent (deprecated)</dt>
+         *          <dd><code>drag:start</code> event from the thumb</dd>
+         *      <dt>originEvent</dt>
          *          <dd><code>drag:start</code> event from the thumb</dd>
          *  </dl>
          */
-        this.fire( 'slideStart', { ddEvent: e } );
+        this.fire('slideStart', {
+           ddEvent: e, // for backward compatibility
+           originEvent: e
+        });
     },
 
     /**
@@ -293,7 +300,8 @@ Y.SliderBase = Y.extend( SliderBase, Y.Widget, {
         Y.log("Thumb position: " + thumbXY + ", Rail position: " + railXY, "info", "slider");
         this.fire( 'thumbMove', {
             offset : (thumbXY - railXY),
-            ddEvent: e
+            ddEvent: e, // for backward compatibility
+            originEvent: e
         } );
     },
 
@@ -313,11 +321,16 @@ Y.SliderBase = Y.extend( SliderBase, Y.Widget, {
          * @param event {Event} The event object for the slideEnd with the
          *                      following extra properties:
          *  <dl>
-         *      <dt>ddEvent</dt>
+         *      <dt>ddEvent (deprecated)</dt>
+         *          <dd><code>drag:end</code> event from the thumb</dd>
+         *      <dt>originEvent</dt>
          *          <dd><code>drag:end</code> event from the thumb</dd>
          *  </dl>
          */
-        this.fire( 'slideEnd', { ddEvent: e } );
+        this.fire('slideEnd', {
+            ddEvent: e,
+            originEvent: e
+        });
     },
 
     /**
@@ -414,9 +427,9 @@ Y.SliderBase = Y.extend( SliderBase, Y.Widget, {
      * <p>Defaults the thumbURL attribute according to the current skin, or
      * &quot;sam&quot; if none can be determined.  Horizontal Sliders will have
      * their <code>thumbUrl</code> attribute set to</p>
-     * <p><code>&quot;/<em>configured</em>/<em>yu</em>i/<em>builddi</em>r/slider/assets/skins/sam/thumb-x.png&quot;</code></p>
+     * <p><code>&quot;/<em>configured</em>/<em>yu</em>i/<em>builddi</em>r/slider-base/assets/skins/sam/thumb-x.png&quot;</code></p>
      * <p>And vertical thumbs will get</p>
-     * <p><code>&quot;/<em>configured</em>/<em>yui</em>/<em>builddir</em>/slider/assets/skins/sam/thumb-y.png&quot;</code></p>
+     * <p><code>&quot;/<em>configured</em>/<em>yui</em>/<em>builddir</em>/slider-base/assets/skins/sam/thumb-y.png&quot;</code></p>
      *
      * @method _initThumbUrl
      * @protected
@@ -432,8 +445,8 @@ Y.SliderBase = Y.extend( SliderBase, Y.Widget, {
                 base = 'http://yui.yahooapis.com/' + Y.version + '/build/';
             }
 
-            // <img src="/path/to/build/slider/assets/skins/sam/thumb-x.png">
-            this.set('thumbUrl', base + 'slider/assets/skins/' +
+            // <img src="/path/to/build/slider-base/assets/skins/sam/thumb-x.png">
+            this.set('thumbUrl', base + 'slider-base/assets/skins/' +
                                  skin + '/thumb-' + this.axis + '.png');
 
         }

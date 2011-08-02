@@ -1,13 +1,9 @@
     /**
      * Wraps some common Selection/Range functionality into a simple object
+     * @class Selection
+     * @constructor
      * @module editor
      * @submodule selection
-     */     
-    /**
-     * Wraps some common Selection/Range functionality into a simple object
-     * @class Selection
-     * @for Selection
-     * @constructor
      */
     
     //TODO This shouldn't be there, Y.Node doesn't normalize getting textnode content.
@@ -37,10 +33,10 @@
                 if (domEvent) {
                     ieNode = Y.config.doc.elementFromPoint(domEvent.clientX, domEvent.clientY);
                 }
+                rng = sel.duplicate();
                 if (!ieNode) {
                     par = sel.parentElement();
                     nodes = par.childNodes;
-                    rng = sel.duplicate();
 
                     for (i = 0; i < nodes.length; i++) {
                         //This causes IE to not allow a selection on a doubleclick
@@ -68,7 +64,16 @@
                     }
                     this.anchorNode = this.focusNode = Y.Selection.resolve(ieNode);
                     
-                    this.anchorOffset = this.focusOffset = (this.anchorNode.nodeValue) ? this.anchorNode.nodeValue.length : 0 ;
+                    rng.moveToElementText(sel.parentElement());
+                    var comp = sel.compareEndPoints('StartToStart', rng),
+                    moved = 0;
+                    if (comp) {
+                        //We are not at the beginning of the selection.
+                        //Setting the move to something large, may need to increase it later
+                        moved = Math.abs(sel.move('character', -9999));
+                    }
+                    
+                    this.anchorOffset = this.focusOffset = moved;
                     
                     this.anchorTextNode = this.focusTextNode = Y.one(ieNode);
                 }
@@ -190,6 +195,7 @@
                     var s = el.style;
                     s.border = '1px solid #ccc';
                     s.lineHeight = '0';
+                    s.height = '0';
                     s.fontSize = '0';
                     s.marginTop = '5px';
                     s.marginBottom = '5px';
@@ -321,7 +327,7 @@
                 }
             });*/
 
-            /** Removed this, as it was causing Pasting to be funky in Safari
+            /* Removed this, as it was causing Pasting to be funky in Safari
             spans = Y.all('.Apple-style-span, .apple-style-span');
             Y.log('Apple Spans found: ' + spans.size(), 'info', 'selection');
             spans.each(function(s) {
@@ -354,7 +360,7 @@
     * @static
     * @property REG_NON
     */
-    Y.Selection.REG_NON = /[\s\S|\n|\t]/gi;
+    Y.Selection.REG_NON = /[\s|\n|\t]/gi;
 
     /**
     * Regular Expression to remove all HTML from a string
@@ -546,7 +552,7 @@
         if (cur.size()) {
             cur.each(function(b) {
                 var c = b.get('parentNode.parentNode.childNodes'), html;
-                if (c.size() > 1) {
+                if (c.size()) {
                     b.remove();
                 } else {
                     html = Y.Selection.getText(c.item(0));
@@ -710,7 +716,7 @@
             
             if (range.pasteHTML) {
                 if (offset === 0 && node && !node.previous() && node.get('nodeType') === 3) {
-                    /**
+                    /*
                     * For some strange reason, range.pasteHTML fails if the node is a textNode and
                     * the offset is 0. (The cursor is at the beginning of the line)
                     * It will always insert the new content at position 1 instead of 

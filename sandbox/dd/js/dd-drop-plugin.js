@@ -38,5 +38,4 @@ YUI.add('dd-drop-plugin', function(Y) {
         Y.Plugin.Drop = Drop;
 
 
-
 }, '@VERSION@' ,{requires:['dd-drop'], skinnable:false});

@@ -134,8 +134,6 @@ Highlighters = Y.mix(Y.namespace('AutoCompleteHighlighters'), {
         // The caseSensitive parameter is only intended for use by
         // subWordMatchCase(). It's intentionally undocumented.
 
-        if (query === '') { return results; }
-
         var queryWords = Y.Text.WordBreak.getUniqueWords(query, {
             ignoreCase: !caseSensitive
         });

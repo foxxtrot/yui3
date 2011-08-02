@@ -425,6 +425,29 @@ Y.extend(Widget, Y.Base, {
     },
 
     /**
+     * <p>
+     * Destroy lifecycle method. Fires the destroy
+     * event, prior to invoking destructors for the
+     * class hierarchy.
+     *
+     * Overrides Base's implementation, to support arguments to destroy
+     * </p>
+     * <p>
+     * Subscribers to the destroy
+     * event can invoke preventDefault on the event object, to prevent destruction
+     * from proceeding.
+     * </p>
+     * @method destroy
+     * @param destroyAllNodes {Boolean} If true, all nodes contained within the Widget are removd and destroyed. Defaults to false due to potentially high run-time cost. 
+     * @return {Widget} A reference to this object
+     * @chainable
+     */
+    destroy: function(destroyAllNodes) {
+        this._destroyAllNodes = destroyAllNodes;
+        return Widget.superclass.destroy.apply(this);
+    },
+
+    /**
      * Removes and destroys the widgets rendered boundingBox, contentBox,
      * and detaches bound UI events.
      *
@@ -435,6 +458,7 @@ Y.extend(Widget, Y.Base, {
 
         var boundingBox = this.get(BOUNDING_BOX),
             contentBox = this.get(CONTENT_BOX),
+            deep = this._destroyAllNodes,
             same = boundingBox && boundingBox.compareTo(contentBox);
 
         if (this.UI_EVENTS) {
@@ -443,12 +467,17 @@ Y.extend(Widget, Y.Base, {
 
         this._unbindUI(boundingBox);
 
-        if (contentBox) {
-            contentBox.remove(TRUE);
-        }
-
-        if (!same) {
+        if (deep) {
+            // Removes and destroys all child nodes.
+            boundingBox.empty();
             boundingBox.remove(TRUE);
+        } else {
+            if (contentBox) {
+                contentBox.remove(TRUE);
+            }
+            if (!same) {
+                boundingBox.remove(TRUE);
+            }
         }
     },
 
@@ -920,6 +949,7 @@ Y.extend(Widget, Y.Base, {
     /**
      * Sets the disabled state for the UI
      *
+     * @method _uiSetDisabled
      * @protected
      * @param {boolean} val
      */
@@ -930,6 +960,7 @@ Y.extend(Widget, Y.Base, {
     /**
      * Sets the focused state for the UI
      *
+     * @method _uiSetFocused
      * @protected
      * @param {boolean} val
      * @param {string} src String representing the source that triggered an update to 

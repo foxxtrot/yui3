@@ -1,10 +1,13 @@
 {
     "autocomplete": {
+        "use": [
+            "autocomplete-base", "autocomplete-sources", "autocomplete-list",
+            "autocomplete-plugin"
+        ],
         "submodules": {
             "autocomplete-base": {
                 "plugins": {
                     "autocomplete-filters": {
-                        "path": "autocomplete/autocomplete-filters-min.js",
 
                         "requires": [
                             "array-extras",
@@ -13,7 +16,6 @@
                     },
 
                     "autocomplete-filters-accentfold": {
-                        "path": "autocomplete/autocomplete-filters-accentfold-min.js",
 
                         "requires": [
                             "array-extras",
@@ -23,7 +25,6 @@
                     },
 
                     "autocomplete-highlighters": {
-                        "path": "autocomplete/autocomplete-highlighters-min.js",
 
                         "requires": [
                             "array-extras",
@@ -32,7 +33,6 @@
                     },
 
                     "autocomplete-highlighters-accentfold": {
-                        "path": "autocomplete/autocomplete-highlighters-accentfold-min.js",
 
                         "requires": [
                             "array-extras",
@@ -55,13 +55,12 @@
             },
 
             "autocomplete-list": {
-                "after": "autocomplete-sources",
+                "after": ["autocomplete-sources"],
 
                 "lang": ["en"],
 
                 "plugins": {
                     "autocomplete-list-keys": {
-                        "path": "autocomplete/autocomplete-list-keys-min.js",
 
                         "condition": {
                             "trigger": "autocomplete-list",
@@ -75,7 +74,6 @@
                     },
 
                     "autocomplete-plugin": {
-                        "path": "autocomplete/autocomplete-plugin-min.js",
 
                         "requires": [
                             "autocomplete-list",
@@ -86,11 +84,13 @@
 
                 "requires": [
                     "autocomplete-base",
+                    "event-resize",
+                    "node-screen",
                     "selector-css3",
+                    "shim-plugin",
                     "widget",
                     "widget-position",
-                    "widget-position-align",
-                    "widget-stack"
+                    "widget-position-align"
                 ],
 
                 "skinnable": true

@@ -2,14 +2,21 @@ YUI.add('editor-base', function(Y) {
 
     /**
      * Base class for Editor. Handles the business logic of Editor, no GUI involved only utility methods and events.
-     * @module editor
-     * @submodule editor-base
+     *
+     *      var editor = new Y.EditorBase({
+     *          content: 'Foo'
+     *      });
+     *      editor.render('#demo');
+     *
+     * @main editor
      */     
     /**
      * Base class for Editor. Handles the business logic of Editor, no GUI involved only utility methods and events.
      * @class EditorBase
      * @for EditorBase
      * @extends Base
+     * @module editor
+     * @submodule editor-base
      * @constructor
      */
     
@@ -172,16 +179,15 @@ YUI.add('editor-base', function(Y) {
                         if (Y.UA.webkit) {
                             this.execCommand('inserttext', '\t');
                         } else if (Y.UA.gecko) {
-                            this.frame.exec._command('inserthtml', '<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>');
+                            this.frame.exec._command('inserthtml', EditorBase.TABKEY);
                         } else if (Y.UA.ie) {
-                            sel = new inst.Selection();
-                            sel._selection.pasteHTML(EditorBase.TABKEY);
+                            this.execCommand('inserthtml', EditorBase.TABKEY);
                         }
                     }
                     break;
             }
             if (Y.UA.webkit && e.commands && (e.commands.indent || e.commands.outdent)) {
-                /**
+                /*
                 * When executing execCommand 'indent or 'outdent' Webkit applies
                 * a class to the BLOCKQUOTE that adds left/right margin to it
                 * This strips that style so it is just a normal BLOCKQUOTE
@@ -200,6 +206,8 @@ YUI.add('editor-base', function(Y) {
                 cmds = e.commands;
             }
             
+            var normal = false;
+
             Y.each(changed, function(el) {
                 var tag = el.tagName.toLowerCase(),
                     cmd = EditorBase.TAG2CMD[tag];
@@ -210,6 +218,10 @@ YUI.add('editor-base', function(Y) {
 
                 //Bold and Italic styles
                 var s = el.currentStyle || el.style;
+                
+                if ((''+s.fontWeight) == 'normal') {
+                    normal = true;
+                }
                 if ((''+s.fontWeight) == 'bold') { //Cast this to a string
                     cmds.bold = 1;
                 }
@@ -221,6 +233,7 @@ YUI.add('editor-base', function(Y) {
                 if (s.fontStyle == 'italic') {
                     cmds.italic = 1;
                 }
+
                 if (s.textDecoration == 'underline') {
                     cmds.underline = 1;
                 }
@@ -260,6 +273,11 @@ YUI.add('editor-base', function(Y) {
                 
             });
             
+            if (normal) {
+                delete cmds.bold;
+                delete cmds.italic;
+            }
+
             e.dompath = inst.all(changed);
             e.classNames = classes;
             e.commands = cmds;
@@ -412,8 +430,10 @@ YUI.add('editor-base', function(Y) {
                     if (range.moveToElementText) {
                         try {
                             range.moveToElementText(n._node);
-                            range.move('character', -1);
-                            range.move('character', 1);
+                            var moved = range.move('character', -1);
+                            if (moved === -1) { //Only move up if we actually moved back.
+                                range.move('character', 1);
+                            }
                             range.select();
                             range.text = '';
                         } catch (e) {}
@@ -521,7 +541,8 @@ YUI.add('editor-base', function(Y) {
         * @private
         */
         _onFrameKeyUp: function(e) {
-            var sel = this._currentSelection;
+            var inst = this.frame.getInstance(),
+                sel = new inst.Selection(e);
 
             if (sel && sel.anchorNode) {
                 this.fire('nodeChange', { changedNode: sel.anchorNode, changedType: 'keyup', selection: sel, changedEvent: e.frameEvent  });
@@ -677,7 +698,7 @@ YUI.add('editor-base', function(Y) {
         * @property TABKEY
         * @description The HTML markup to use for the tabkey
         */
-        TABKEY: '<span class="tab">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>',
+        TABKEY: '<span class="tab">&nbsp;&nbsp;&nbsp;&nbsp;</span>',
         /**
         * @static
         * @method FILTER_RGB

@@ -16,8 +16,13 @@
             OFFSET_HEIGHT = "offsetHeight",
             VIEWPORT_REGION = "viewportRegion",
             REGION = "region",
-
-            AlignChange = "alignChange";
+            WINDOW = 'window',
+            RESIZE = 'resize',
+            SCROLL = 'scroll',
+            VISIBLE = "visible",
+            BOUNDING_BOX = "boundingBox",
+            AlignChange = "alignChange",
+            VisibleChange = "visibleChange";
 
         /**
          * Widget extension, which can be used to add extended XY positioning support to the base Widget class,
@@ -87,6 +92,32 @@
                 setter: "_setAlignCenter",
                 lazyAdd:false,
                 value:false
+            },
+
+            /**
+             * @attribute alignOn
+             * @type array
+             *
+             * @description An array of objects corresponding to the nodes and events that will sync the alignment of the widget.
+             * The implementer can supply an array of objects, with each object having the following properties:
+             * eventName: (string, required): The eventName to listen to.
+             * node: (Y.Node, optional): The Y.Node that will fire the event (defaults to the boundingBox of the widget)
+             * By default, this attribute consists of two objects which will cause the widget to re-align to the node that it is aligned to:
+             * (1) Scrolling the window, and (2) resizing the window.
+             */
+            alignOn: {
+                value: [
+                    {
+                        node: Y.one(WINDOW),
+                        eventName: RESIZE
+                    },
+                    {
+                        node: Y,
+                        eventName: SCROLL
+                    }
+                ],
+
+                validator: Y.Lang.isArray
             }
         };
 
@@ -185,6 +216,7 @@
              */
             _syncUIPosAlign : function() {
                 var align = this.get(ALIGN);
+                this._uiSetHostVisible(this.get(VISIBLE));
                 if (align) {
                     this._uiSetAlign(align.node, align.points);
                 }
@@ -202,6 +234,51 @@
              */
             _bindUIPosAlign : function() {
                 this.after(AlignChange, this._afterAlignChange);
+                this.after(VisibleChange, this._afterVisibleChange);
+                this.after("alignOnChange", this._afterAlignOnChange);
+
+            },
+
+            _attachUIHandles: function() {
+                if (this._uiHandles) { return; }
+
+                var syncAlign = Y.bind(this._syncAlign, this),
+                alignOn = this.get('alignOn'),
+                bb = this.get(BOUNDING_BOX),
+                uiHandles = [],
+                i = 0,
+                o = {node: undefined, ev: undefined};
+
+                for (; i < alignOn.length; i++) {
+
+                    o.node = alignOn[i].node;
+                    o.ev = alignOn[i].eventName;
+
+                    if (!o.node && o.ev) {
+                        uiHandles.push(bb.on(o.ev, syncAlign));
+                    }
+                    else if (o.node && o.ev) {
+                        uiHandles.push(o.node.on(o.ev, syncAlign));
+                    }
+                    else {
+                        Y.log("eventName was not specified.");
+                    }
+                }
+                this.after("destroy", this._detachUIHandles);
+
+                this._uiHandles = uiHandles;
+            },
+
+            _detachUIHandles : function () {
+                if (this._uiHandles) {
+                    new Y.EventHandle(this._uiHandles).detach();
+
+                    this._uiHandles = null;
+                }
+            },
+
+            _syncAlign: function() {
+                this._syncUIPosAlign();
             },
 
             /**
@@ -234,7 +311,21 @@
             _afterAlignChange : function(e) {
                 if (e.newVal) {
                     this._uiSetAlign(e.newVal.node, e.newVal.points);
+                                        
                 }
+            },
+
+            _uiSetHostVisible: function(visible) {
+                if (visible) {
+                    this._attachUIHandles();
+                }
+                else {
+                    this._detachUIHandles();
+                }
+            },
+
+            _afterVisibleChange: function(e) {
+                this._uiSetHostVisible(e.newVal);
             },
 
             /**
@@ -362,6 +453,19 @@
                     }
                 }
                 return nodeRegion;
+            },
+
+            /**
+             * Default function called when alignOn Attribute is changed. Remove existing listeners and create new listeners.
+             *
+             * @method _afterAlignOnChange
+             */
+            _afterAlignOnChange : function(e) {
+                this._detachUIHandles();
+
+                if (this.get(VISIBLE)) {
+                    this._attachUIHandles();
+                }
             },
 
             /**

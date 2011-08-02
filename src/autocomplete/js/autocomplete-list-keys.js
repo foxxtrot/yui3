@@ -57,8 +57,8 @@ ListKeys.prototype = {
      * @protected
      */
     _bindKeys: function () {
-        this._keyEvents.push(this._inputNode.on(
-                Y.UA.gecko ? 'keypress' : 'keydown', this._onInputKey, this));
+        this._keyEvents.push(this._inputNode.on('keydown', this._onInputKey,
+            this));
     },
 
     /**
@@ -95,11 +95,11 @@ ListKeys.prototype = {
      * @method _keyEnter
      * @protected
      */
-    _keyEnter: function () {
+    _keyEnter: function (e) {
         var item = this.get('activeItem');
 
         if (item) {
-            this.selectItem(item);
+            this.selectItem(item, e);
         } else {
             // Don't prevent form submission when there's no active item.
             return false;
@@ -122,14 +122,14 @@ ListKeys.prototype = {
      * @method _keyTab
      * @protected
      */
-    _keyTab: function () {
+    _keyTab: function (e) {
         var item;
 
         if (this.get('tabSelect')) {
             item = this.get('activeItem');
 
             if (item) {
-                this.selectItem(item);
+                this.selectItem(item, e);
                 return true;
             }
         }

@@ -26,9 +26,44 @@ function Fills(cfg)
 
 Fills.prototype = {
     /**
+     * Returns a path shape used for drawing fills.
+     *
+     * @method _getPath
+     * @return Path
+     * @private
+     */
+    _getPath: function()
+    {
+        var path = this._path;
+        if(!path)
+        {
+            path = this.get("graph").get("graphic").addShape({type:"path"});
+            this._path = path;
+        }
+        return path;
+    },
+    
+    /**
+     * Toggles visibility
+     *
+     * @method _toggleVisible
+     * @param {Boolean} visible indicates visibilitye
+     * @private
+     */
+    _toggleVisible: function(visible)
+    {   
+        if(this._path)
+        {
+            this._path.set("visible", visible);
+        }
+    },
+
+    /**
      * Draws fill
      *
      * @method drawFill
+     * @param {Array} xcoords The x-coordinates for the series.
+     * @param {Array} ycoords The y-coordinates for the series.
      * @protected
      */
     drawFill: function(xcoords, ycoords)
@@ -46,11 +81,15 @@ Fills.prototype = {
             nextY,
             i = 1,
             styles = this.get("styles").area,
-            graphic = this.get("graphic"),
+            path = this._getPath(),
             color = styles.color || this._getDefaultColor(this.get("graphOrder"), "slice");
-        graphic.clear();
-        graphic.beginFill(color, styles.alpha);
-        graphic.moveTo(firstX, firstY);
+        path.clear();
+        path.set("fill", {
+            color: color, 
+            opacity: styles.alpha
+        });
+        path.set("stroke", {weight: 0});
+        path.moveTo(firstX, firstY);
         for(; i < len; i = ++i)
         {
             nextX = xcoords[i];
@@ -61,11 +100,11 @@ Fills.prototype = {
                 lastValidY = nextY;
                 continue;
             }
-            graphic.lineTo(nextX, nextY);
+            path.lineTo(nextX, nextY);
             lastValidX = nextX;
             lastValidY = nextY;
         }
-        graphic.end();
+        path.end();
     },
 	
     /**
@@ -94,10 +133,14 @@ Fills.prototype = {
             firstX = xcoords[0],
             firstY = ycoords[0],
             styles = this.get("styles").area,
-            graphic = this.get("graphic"),
+            path = this._getPath(),
             color = styles.color || this._getDefaultColor(this.get("graphOrder"), "slice");
-        graphic.beginFill(color, styles.alpha);
-        graphic.moveTo(firstX, firstY);
+        path.set("fill", {
+            color: color, 
+            opacity: styles.alpha
+        });
+        path.set("stroke", {weight: 0});
+        path.moveTo(firstX, firstY);
         for(; i < len; i = ++i)
         {
             x = curvecoords[i].endx;
@@ -106,20 +149,20 @@ Fills.prototype = {
             cx2 = curvecoords[i].ctrlx2;
             cy1 = curvecoords[i].ctrly1;
             cy2 = curvecoords[i].ctrly2;
-            graphic.curveTo(cx1, cy1, cx2, cy2, x, y);
+            path.curveTo(cx1, cy1, cx2, cy2, x, y);
         }
         if(this.get("direction") === "vertical")
         {
-            graphic.lineTo(this._leftOrigin, y);
-            graphic.lineTo(this._leftOrigin, firstY);
+            path.lineTo(this._leftOrigin, y);
+            path.lineTo(this._leftOrigin, firstY);
         }
         else
         {
-            graphic.lineTo(x, this._bottomOrigin);
-            graphic.lineTo(firstX, this._bottomOrigin);
+            path.lineTo(x, this._bottomOrigin);
+            path.lineTo(firstX, this._bottomOrigin);
         }
-        graphic.lineTo(firstX, firstY);
-        graphic.end();
+        path.lineTo(firstX, firstY);
+        path.end();
     },
     
     /**
@@ -154,14 +197,18 @@ Fills.prototype = {
             firstX,
             firstY,
             styles = this.get("styles").area,
-            graphic = this.get("graphic"),
+            path = this._getPath(),
             color = styles.color || this._getDefaultColor(this.get("graphOrder"), "slice");
         firstX = xcoords[0];
         firstY = ycoords[0];
         curvecoords = this.getCurveControlPoints(xcoords, ycoords);
         len = curvecoords.length;
-        graphic.beginFill(color, styles.alpha);
-        graphic.moveTo(firstX, firstY);
+        path.set("fill", {
+            color: color, 
+            opacity: styles.alpha
+        });
+        path.set("stroke", {weight: 0});
+        path.moveTo(firstX, firstY);
         for(; i < len; i = ++i)
         {
             x = curvecoords[i].endx;
@@ -170,7 +217,7 @@ Fills.prototype = {
             cx2 = curvecoords[i].ctrlx2;
             cy1 = curvecoords[i].ctrly1;
             cy2 = curvecoords[i].ctrly2;
-            graphic.curveTo(cx1, cy1, cx2, cy2, x, y);
+            path.curveTo(cx1, cy1, cx2, cy2, x, y);
         }
         if(order > 0)
         {
@@ -179,7 +226,7 @@ Fills.prototype = {
             curvecoords = this.getCurveControlPoints(prevXCoords, prevYCoords);
             i = 0;
             len = curvecoords.length;
-            graphic.lineTo(prevXCoords[0], prevYCoords[0]);
+            path.lineTo(prevXCoords[0], prevYCoords[0]);
             for(; i < len; i = ++i)
             {
                 x = curvecoords[i].endx;
@@ -188,34 +235,38 @@ Fills.prototype = {
                 cx2 = curvecoords[i].ctrlx2;
                 cy1 = curvecoords[i].ctrly1;
                 cy2 = curvecoords[i].ctrly2;
-                graphic.curveTo(cx1, cy1, cx2, cy2, x, y);
+                path.curveTo(cx1, cy1, cx2, cy2, x, y);
             }
         }
         else
         {
             if(this.get("direction") === "vertical")
             {
-                graphic.lineTo(this._leftOrigin, ycoords[ycoords.length-1]);
-                graphic.lineTo(this._leftOrigin, firstY);
+                path.lineTo(this._leftOrigin, ycoords[ycoords.length-1]);
+                path.lineTo(this._leftOrigin, firstY);
             }
             else
             {
-                graphic.lineTo(xcoords[xcoords.length-1], this._bottomOrigin);
-                graphic.lineTo(firstX, this._bottomOrigin);
+                path.lineTo(xcoords[xcoords.length-1], this._bottomOrigin);
+                path.lineTo(firstX, this._bottomOrigin);
             }
 
         }
-        graphic.lineTo(firstX, firstY);
-        graphic.end();
+        path.lineTo(firstX, firstY);
+        path.end();
     },
     
     /**
+     * Storage for default area styles.
+     *
+     * @property _defaults
+     * @type Object
      * @private
      */
     _defaults: null,
 
     /**
-     * Concatanates coordinate array with correct coordinates for closing an area fill.
+     * Concatenates coordinate array with correct coordinates for closing an area fill.
      *
      * @method _getClosingPoints
      * @return Array
@@ -295,6 +346,10 @@ Fills.prototype = {
     },
 
     /**
+     * Returns default values for area styles.
+     *
+     * @method _getAreaDefaults
+     * @return Object
      * @private
      */
     _getAreaDefaults: function()

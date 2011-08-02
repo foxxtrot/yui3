@@ -8,8 +8,8 @@
                     "event-gestures",
                     "transition"
                 ],
-                "skinnable" : true,
-                "path": "scrollview/scrollview-base-min.js"
+
+                "skinnable": true
             },
             "scrollview-base-ie": {
                 "requires": [
@@ -22,17 +22,25 @@
             },
             "scrollview-scrollbars" : {
                 "requires" : [
+		            "classnamemanager",
+                    "transition",
                     "plugin"
                 ],
-                "skinnable" : true,
-                "path": "scrollview/scrollview-scrollbars-min.js"
+                "skinnable" : true
             },
             "scrollview-paginator" : {
                 "requires" : [
                     "plugin"
+                ]
+            },
+            "scrollview-list" : {
+                "requires" : [
+                    "plugin"
                 ],
-                "path": "scrollview/scrollview-paginator-min.js"
+
+                "skinnable" : true
             }
+
         },
         "requires" : [
             "scrollview-base",

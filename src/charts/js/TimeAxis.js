@@ -16,6 +16,11 @@ TimeAxis.NAME = "timeAxis";
 TimeAxis.ATTRS = 
 {
     /**
+     * Indicates whether the maximum is calculated or explicitly set. 
+     *
+     * @attribute setMax
+     * @readOnly
+     * @type Boolean
      * @private
      */
     setMax: {
@@ -29,6 +34,11 @@ TimeAxis.ATTRS =
     },
 
     /**
+     * Indicates whether the minimum is calculated or explicitly set. 
+     *
+     * @attribute setMin
+     * @readOnly
+     * @type Boolean
      * @private
      */
     setMin: {
@@ -42,7 +52,7 @@ TimeAxis.ATTRS =
     },
 
     /**
-     * The maximum value that will appear on an axis.
+     * The maximum value that will appear on an axis. Unless explicitly set, this value is calculated by the `Axis`.
      *
      * @attribute maximum
      * @type Number
@@ -65,7 +75,7 @@ TimeAxis.ATTRS =
     },
 
     /**
-     * The minimum value that will appear on an axis.
+     * The minimum value that will appear on an axis. Unless explicitly set, this value is calculated by the `Axis`.
      *
      * @attribute minimum
      * @type Number
@@ -88,12 +98,15 @@ TimeAxis.ATTRS =
     },
 
     /**
-     * Formats a label.
+     * Method used for formatting a label. This attribute allows for the default label formatting method to overridden. The method use would need
+     * to implement the arguments below and return a `String`.
+     * <dl>
+     *      <dt>val</dt><dd>Label to be formatted. (`String`)</dd>
+     *      <dt>format</dt><dd>STRFTime string used to format the label. (optional)</dd>
+     * </dl>
      *
      * @attribute labelFunction
      * @type Function
-     * @param {Object} val Value to be formatted. 
-     * @param {String} format Pattern used to format label.
      */
     labelFunction: {
         value: function(val, format)
@@ -108,7 +121,7 @@ TimeAxis.ATTRS =
     },
 
     /**
-     * Pattern used by the <code>labelFunction</code> to format a label.
+     * Pattern used by the `labelFunction` to format a label.
      *
      * @attribute labelFormat
      * @type String
@@ -129,6 +142,10 @@ Y.extend(TimeAxis, Y.AxisType, {
     GUID: "yuitimeaxis",
 	
     /**
+     * Type of data used in `Axis`.
+     *
+     * @property _dataType
+     * @readOnly
      * @private
      */
     _dataType: "time",
@@ -163,6 +180,12 @@ Y.extend(TimeAxis, Y.AxisType, {
     },
 
     /**
+     * Gets an array of values based on a key.
+     *
+     * @method _getKeyArray
+     * @param {String} key Value key associated with the data array.
+     * @param {Array} data Array in which the data resides.
+     * @return Array
      * @private
      */
     _getKeyArray: function(key, data)
@@ -179,13 +202,32 @@ Y.extend(TimeAxis, Y.AxisType, {
             {   
                 val = obj.valueOf();
             }
-            else if(!Y.Lang.isNumber(obj))
-            {
-                val = new Date(obj.toString()).valueOf();
-            }
             else
             {
-                val = obj;
+                val = new Date(obj);
+                if(Y.Lang.isDate(val))
+                {
+                    val = val.valueOf();
+                }
+                else if(!Y.Lang.isNumber(obj))
+                {
+                    if(Y.Lang.isNumber(parseFloat(obj)))
+                    {
+                        val = parseFloat(obj);
+                    }
+                    else
+                    {
+                        if(typeof obj != "string")
+                        {
+                            obj = obj.toString();
+                        }
+                        val = new Date(obj).valueOf();
+                    }
+                }
+                else
+                {
+                    val = obj;
+                }
             }
             keyArray[i] = val;
         }
@@ -193,7 +235,12 @@ Y.extend(TimeAxis, Y.AxisType, {
     },
 
     /**
-     * @private (override)
+     * Sets data by key
+     *
+     * @method _setDataByKey
+     * @param {String} key Key value to use.
+     * @param {Array} data Array to use.
+     * @private 
      */
     _setDataByKey: function(key, data)
     {
@@ -207,16 +254,35 @@ Y.extend(TimeAxis, Y.AxisType, {
         {
             obj = dv[i][key];
             if(Y.Lang.isDate(obj))
-            {
+            {   
                 val = obj.valueOf();
-            }
-            else if(!Y.Lang.isNumber(obj))
-            {
-                val = new Date(obj.toString()).valueOf();
             }
             else
             {
-                val = obj;
+                val = new Date(obj);
+                if(Y.Lang.isDate(val))
+                {
+                    val = val.valueOf();
+                }
+                else if(!Y.Lang.isNumber(obj))
+                {
+                    if(Y.Lang.isNumber(parseFloat(obj)))
+                    {
+                        val = parseFloat(obj);
+                    }
+                    else
+                    {
+                        if(typeof obj != "string")
+                        {
+                            obj = obj.toString();
+                        }
+                        val = new Date(obj).valueOf();
+                    }
+                }
+                else
+                {
+                    val = obj;
+                }
             }
             arr[i] = val;
         }
@@ -225,6 +291,11 @@ Y.extend(TimeAxis, Y.AxisType, {
     },
 
     /**
+     * Parses value into a number.
+     *
+     * @method _getNumber
+     * @param val {Object} Value to parse into a number
+     * @return Number
      * @private
      */
     _getNumber: function(val)
@@ -235,7 +306,7 @@ Y.extend(TimeAxis, Y.AxisType, {
         }
         else if(!Y.Lang.isNumber(val) && val)
         {
-            val = new Date(val.toString()).valueOf();
+            val = new Date(val).valueOf();
         }
 
         return val;

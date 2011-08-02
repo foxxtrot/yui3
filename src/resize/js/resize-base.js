@@ -1,6 +1,10 @@
 /**
  * The Resize Utility allows you to make an HTML element resizable.
- *
+ * @main resize
+ */
+
+/**
+ * The Resize Utility allows you to make an HTML element resizable.
  * @module resize
  */
 
@@ -33,6 +37,7 @@ var Lang = Y.Lang,
 	DEF_MIN_WIDTH = 'defMinWidth',
 	HANDLE = 'handle',
 	HANDLES = 'handles',
+	HANDLES_WRAPPER = 'handlesWrapper',
 	HIDDEN = 'hidden',
 	INNER = 'inner',
 	LEFT = 'left',
@@ -122,43 +127,43 @@ var Lang = Y.Lang,
 	CSS_RESIZE_HANDLE_INNER_PLACEHOLDER = getCN(RESIZE, HANDLE, INNER, HANDLE_SUB),
 	CSS_RESIZE_HANDLE_PLACEHOLDER = getCN(RESIZE, HANDLE, HANDLE_SUB),
 	CSS_RESIZE_HIDDEN_HANDLES = getCN(RESIZE, HIDDEN, HANDLES),
+	CSS_RESIZE_HANDLES_WRAPPER = getCN(RESIZE, HANDLES, WRAPPER),
 	CSS_RESIZE_WRAPPER = getCN(RESIZE, WRAPPER);
 
 /**
- * A base class for Resize, providing:
- * <ul>
- *    <li>Basic Lifecycle (initializer, renderUI, bindUI, syncUI, destructor)</li>
- *    <li>Applies drag handles to an element to make it resizable</li>
- *    <li>Here is the list of valid resize handles:
- *        <code>[ 't', 'tr', 'r', 'br', 'b', 'bl', 'l', 'tl' ]</code>. You can
- *        read this list as top, top-right, right, bottom-right, bottom,
- *        bottom-left, left, top-left.</li>
- *    <li>The drag handles are inserted into the element and positioned
- *        absolute. Some elements, such as a textarea or image, don't support
- *        children. To overcome that, set wrap:true in your config and the
- *        element willbe wrapped for you automatically.</li>
- * </ul>
- *
- * Quick Example:
- *
- * <pre><code>var instance = new Y.Resize({
- *  node: '#resize1',
- *  preserveRatio: true,
- *  wrap: true,
- *  maxHeight: 170,
- *  maxWidth: 400,
- *  handles: 't, tr, r, br, b, bl, l, tl'
- * });
- * </code></pre>
- *
- * Check the list of <a href="Resize.html#configattributes">Configuration Attributes</a> available for
- * Resize.
- *
- * @class Resize
- * @param config {Object} Object literal specifying widget configuration properties.
- * @constructor
- * @extends Base
- */
+A base class for Resize, providing:
+
+   * Basic Lifecycle (initializer, renderUI, bindUI, syncUI, destructor)
+   * Applies drag handles to an element to make it resizable
+   * Here is the list of valid resize handles:
+       `[ 't', 'tr', 'r', 'br', 'b', 'bl', 'l', 'tl' ]`. You can
+       read this list as top, top-right, right, bottom-right, bottom,
+       bottom-left, left, top-left.
+   * The drag handles are inserted into the element and positioned
+       absolute. Some elements, such as a textarea or image, don't support
+       children. To overcome that, set wrap:true in your config and the
+       element willbe wrapped for you automatically.
+
+Quick Example:
+
+    var instance = new Y.Resize({
+        node: '#resize1',
+        preserveRatio: true,
+        wrap: true,
+        maxHeight: 170,
+        maxWidth: 400,
+        handles: 't, tr, r, br, b, bl, l, tl'
+    });
+
+Check the list of <a href="Resize.html#configattributes">Configuration Attributes</a> available for
+Resize.
+
+@class Resize
+@param config {Object} Object literal specifying widget configuration properties.
+@constructor
+@extends Base
+*/
+
 function Resize() {
     Resize.superclass.constructor.apply(this, arguments);
 }
@@ -260,6 +265,18 @@ Y.mix(Resize, {
 		handles: {
 			setter: '_setHandles',
 			value: ALL
+		},
+
+        /**
+         * Node to wrap the resize handles.
+         *
+         * @attribute handlesWrapper
+         * @type Node
+         */
+		handlesWrapper: {
+			readOnly: true,
+			setter: Y.one,
+			valueFn: '_valueHandlesWrapper'
 		},
 
 		/**
@@ -432,6 +449,14 @@ Y.Resize = Y.extend(
 	     * @type {String}
 	     */
 		REGEX_CHANGE_WIDTH: /^(bl|br|l|r|tl|tr)$/i,
+
+		/**
+	     * Template used to create the resize wrapper for the handles.
+	     *
+	     * @property HANDLES_WRAP_TEMPLATE
+	     * @type {String}
+	     */
+		HANDLES_WRAP_TEMPLATE: '<div class="'+CSS_RESIZE_HANDLES_WRAPPER+'"></div>',
 
 		/**
 	     * Template used to create the resize wrapper node when needed.
@@ -714,7 +739,7 @@ Y.Resize = Y.extend(
 			instance.delegate = new Y.DD.Delegate(
 				{
 					bubbleTargets: instance,
-					container: instance.get(WRAPPER),
+					container: instance.get(HANDLES_WRAPPER),
 					dragConfig: {
 						clickPixelThresh: 0,
 						clickTimeThresh: 0,
@@ -835,11 +860,14 @@ Y.Resize = Y.extend(
 	      */
 		_renderHandles: function() {
 			var instance = this,
-				wrapper = instance.get(WRAPPER);
+				wrapper = instance.get(WRAPPER),
+				handlesWrapper = instance.get(HANDLES_WRAPPER);
 
 			instance.eachHandle(function(handleEl) {
-				wrapper.append(handleEl);
+				handlesWrapper.append(handleEl);
 			});
+
+			wrapper.append(handlesWrapper);
 		},
 
 	    /**
@@ -1541,6 +1569,17 @@ Y.Resize = Y.extend(
 			if (!instance.get(RESIZING)) {
 				instance._setActiveHandlesUI(false);
 			}
+		},
+
+		/**
+	     * Default value for the wrapper handles node attribute
+	     *
+	     * @method _valueHandlesWrapper
+	     * @protected
+	     * @readOnly
+	     */
+		_valueHandlesWrapper: function() {
+			return Y.Node.create(this.HANDLES_WRAP_TEMPLATE);
 		},
 
 		/**

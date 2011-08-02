@@ -3,14 +3,11 @@ YUI.add('editor-br', function(Y) {
 
     /**
      * Plugin for Editor to normalize BR's.
-     * @module editor
-     * @submodule editor-br
-     */     
-    /**
-     * Plugin for Editor to normalize BR's.
      * @class Plugin.EditorBR
      * @extends Base
      * @constructor
+     * @module editor
+     * @submodule editor-br
      */
 
 
@@ -80,7 +77,7 @@ YUI.add('editor-br', function(Y) {
                 case 'backspace-up':
                 case 'backspace-down':
                 case 'delete-up':
-                    /**
+                    /*
                     * This forced FF to redraw the content on backspace.
                     * On some occasions FF will leave a cursor residue after content has been deleted.
                     * Dropping in the empty textnode and then removing it causes FF to redraw and

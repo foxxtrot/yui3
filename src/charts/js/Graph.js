@@ -1,5 +1,5 @@
 /**
- * Graph manages and contains series instances for a <code>CartesianChart</code>
+ * Graph manages and contains series instances for a `CartesianChart`
  * instance.
  *
  * @class Graph
@@ -8,6 +8,10 @@
  * @uses Renderer
  */
 Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
+    /**
+     * @method bindUI
+     * @private
+     */
     bindUI: function()
     {
         var bb = this.get("boundingBox");
@@ -18,50 +22,33 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * @method syncUI
      * @private
      */
     syncUI: function()
     {
-        if(this.get("showBackground"))
-        {
-            var graphic = new Y.Graphic(),
-                graphicNode,
-                cb = this.get("contentBox"),
-                bg = this.get("styles").background,
-                border = bg.border,
-                weight = border.weight || 0,
-                w = this.get("width"),
-                h = this.get("height");
-            if(w)
-            {
-                w += weight * 2;
-                bg.width = w;
-            }   
-            if(h)
-            {
-                h += weight * 2;
-                bg.height = h;
-            }
-            graphic.render(cb);
-            this._background = graphic.getShape(bg);
-            graphicNode = Y.one(graphic.node);
-            graphicNode.setStyle("left", 0 - weight);
-            graphicNode.setStyle("top", 0 - weight);
-            graphicNode.setStyle("zIndex", -1);
-        }
-    },
-   
-    /**
-     * @private
-     */
-    renderUI: function()
-    {
-        var sc = this.get("seriesCollection"),
+        var background,
+            cb,
+            bg,
+            sc = this.get("seriesCollection"),
             series,
             i = 0,
             len = sc.length,
             hgl = this.get("horizontalGridlines"),
             vgl = this.get("verticalGridlines");
+        if(this.get("showBackground"))
+        {
+            background = this.get("background");
+            cb = this.get("contentBox");
+            bg = this.get("styles").background;
+            bg.stroke = bg.border;
+            bg.stroke.opacity = bg.stroke.alpha;
+            bg.fill.opacity = bg.fill.alpha;
+            bg.width = this.get("width");
+            bg.height = this.get("height");
+            bg.type = bg.shape;
+            background.set(bg);
+        }
         for(; i < len; ++i)
         {
             series = sc[i];
@@ -79,10 +66,13 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
             vgl.draw();
         }
     },
-
+   
     /**
+     * Object of arrays containing series mapped to a series type.
+     *
+     * @property seriesTypes
+     * @type Object
      * @private
-     * Hash of arrays containing series mapped to a series type.
      */
     seriesTypes: null,
 
@@ -123,12 +113,12 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
-     * @protected
-     * Adds dispatcher to a <code>_dispatcher</code> used to
+     * Adds dispatcher to a `_dispatcher` used to
      * to ensure all series have redrawn before for firing event.
      *
      * @method addDispatcher
      * @param {CartesianSeries} val series instance to add
+     * @protected
      */
     addDispatcher: function(val)
     {
@@ -140,19 +130,29 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Collection of series to be displayed in the graph.
+     *
+     * @property _seriesCollection
+     * @type Array
      * @private 
-     * @description Collection of series to be displayed in the graph.
      */
     _seriesCollection: null,
     
     /**
+     * Object containing key value pairs of `CartesianSeries` instances.
+     *
+     * @property _seriesDictionary
+     * @type Object
      * @private
      */
     _seriesDictionary: null,
 
     /**
-     * @private
      * Parses series instances to be displayed in the graph.
+     *
+     * @method _parseSeriesCollection
+     * @param {Array} Collection of `CartesianSeries` instances or objects container `CartesianSeries` attributes values.
+     * @private
      */
     _parseSeriesCollection: function(val)
     {
@@ -196,8 +196,11 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
-     * @private
      * Adds a series to the graph.
+     *
+     * @method _addSeries
+     * @param {CartesianSeries} series Series to add to the graph.
+     * @private
      */
     _addSeries: function(series)
     {
@@ -225,6 +228,10 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Creates a `CartesianSeries` instance from an object containing attribute key value pairs.
+     *
+     * @method createSeries
+     * @param {Object} seriesData Series attribute key value pairs.
      * @private
      */
     _createSeries: function(seriesData)
@@ -253,6 +260,11 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Returns a specific `CartesianSeries` class based on key value.
+     *
+     * @method _getSeries
+     * @param {String} type Key value for the series class.
+     * @return CartesianSeries
      * @private
      */
     _getSeries: function(type)
@@ -331,6 +343,10 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Event handler for marker events.
+     *
+     * @method _markerEventHandler
+     * @param {Object} e Event object.
      * @private
      */
     _markerEventHandler: function(e)
@@ -344,20 +360,36 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Collection of `CartesianSeries` instances to be redrawn.
+     *
+     * @property _dispatchers
+     * @type Array
      * @private
      */
     _dispatchers: null,
 
     /**
+     * Updates the `Graph` styles.
+     *
+     * @method _updateStyles
      * @private
      */
     _updateStyles: function()
     {
-        this._background.update(this.get("styles").background);
+        var styles = this.get("styles").background,
+            border = styles.border;
+            border.opacity = border.alpha;
+            styles.stroke = border;
+            styles.fill.opacity = styles.fill.alpha;
+        this.get("background").set(styles);
         this._sizeChangeHandler();
     },
 
     /**
+     * Event handler for size changes.
+     *
+     * @method _sizeChangeHandler
+     * @param {Object} e Event object.
      * @private
      */
     _sizeChangeHandler: function(e)
@@ -366,33 +398,25 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
             vgl = this.get("verticalGridlines"),
             w = this.get("width"),
             h = this.get("height"),
-            graphicNode,
-            x = 0,
-            y = 0,
             bg = this.get("styles").background,
-            weight;
+            weight,
+            background;
         if(bg && bg.border)
         {
             weight = bg.border.weight || 0;
         }
-        if(this._background)
+        if(this.get("showBackground"))
         {
-            graphicNode = Y.one(this._background.parentNode);
+            background = this.get("background");
             if(w && h)
             {
-                if(weight)
-                {
-                    w += weight * 2;
-                    h += weight * 2;
-                    x -= weight;
-                    y -= weight;
-                }
-                graphicNode.setStyle("width", w);
-                graphicNode.setStyle("height", h);
-                graphicNode.setStyle("left", x);
-                graphicNode.setStyle("top", y);
-                this._background.update({width:w, height:h});
+                background.set("width", w);
+                background.set("height", h);
             }
+        }
+        if(this._gridlines)
+        {
+            this._gridlines.clear();
         }
         if(hgl && hgl instanceof Y.Gridlines)
         {
@@ -406,6 +430,9 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Draws each series.
+     *
+     * @method _drawSeries
      * @private
      */
     _drawSeries: function()
@@ -415,11 +442,16 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
             this._callLater = true;
             return;
         }
+        var sc,
+            i,
+            len,
+            graphic = this.get("graphic");
+        graphic.set("autoDraw", false);
         this._callLater = false;
         this._drawing = true;
-        var sc = this.get("seriesCollection"),
-            i = 0,
-            len = sc.length;
+        sc = this.get("seriesCollection");
+        i = 0;
+        len = sc.length;
         for(; i < len; ++i)
         {
             sc[i].draw();
@@ -434,14 +466,19 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
         {
             this._drawSeries();
         }
-    },
+    },  
 
     /**
+     * Event handler for series drawingComplete event.
+     *
+     * @method _drawingCompleteHandler
+     * @param {Object} e Event object.
      * @private
      */
     _drawingCompleteHandler: function(e)
     {
         var series = e.currentTarget,
+            graphic,
             index = Y.Array.indexOf(this._dispatchers, series);
         if(index > -1)
         {
@@ -449,18 +486,22 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
         }
         if(this._dispatchers.length < 1)
         {
+            graphic = this.get("graphic");
+            if(!graphic.get("autoDraw"))
+            {
+                graphic._redraw();
+            }
             this.fire("chartRendered");
         }
     },
 
     /**
-     * @protected
-     *
-     * Gets the default value for the <code>styles</code> attribute. Overrides
+     * Gets the default value for the `styles` attribute. Overrides
      * base implementation.
      *
      * @method _getDefaultStyles
      * @return Object
+     * @protected
      */
     _getDefaultStyles: function()
     {
@@ -481,8 +522,8 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
 }, {
     ATTRS: {
         /**
-         * Collection of series. When setting the <code>seriesCollection</code> the array can contain a combination of either
-         * <code>CartesianSeries</code> instances or object literals with properties that will define a series.
+         * Collection of series. When setting the `seriesCollection` the array can contain a combination of either
+         * `CartesianSeries` instances or object literals with properties that will define a series.
          *
          * @attribute seriesCollection
          * @type CartesianSeries
@@ -501,7 +542,7 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
         },
        
         /**
-         * Indicates whether the <code>Graph</code> has a background.
+         * Indicates whether the `Graph` has a background.
          *
          * @attribute showBackground
          * @type Boolean
@@ -512,10 +553,11 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
         },
 
         /**
-         * Read-only hash lookup for all series on in the <code>Graph</code>.
+         * Read-only hash lookup for all series on in the `Graph`.
          *
          * @attribute seriesDictionary
          * @type Object
+         * @readOnly
          */
         seriesDictionary: {
             readOnly: true,
@@ -527,7 +569,7 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
         },
 
         /**
-         * Reference to the horizontal <code>Gridlines</code> instance.
+         * Reference to the horizontal `Gridlines` instance.
          *
          * @attribute horizontalGridlines
          * @type Gridlines
@@ -547,20 +589,18 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
                 {
                     gl = val;
                     val.set("graph", this);
-                    val.render();
                     return val;
                 }
                 else if(val && val.axis)
                 {
                     gl = new Y.Gridlines({direction:"horizontal", axis:val.axis, graph:this, styles:val.styles});
-                    gl.render();
                     return gl;
                 }
             }
         },
         
         /**
-         * Reference to the vertical <code>Gridlines</code> instance.
+         * Reference to the vertical `Gridlines` instance.
          *
          * @attribute verticalGridlines
          * @type Gridlines
@@ -580,32 +620,97 @@ Y.Graph = Y.Base.create("graph", Y.Widget, [Y.Renderer], {
                 {
                     gl = val;
                     val.set("graph", this);
-                    val.render();
                     return val;
                 }
                 else if(val && val.axis)
                 {
                     gl = new Y.Gridlines({direction:"vertical", axis:val.axis, graph:this, styles:val.styles});
-                    gl.render();
                     return gl;
                 }
+            }
+        },
+
+        /**
+         * Reference to graphic instance used for the background.
+         *
+         * @attribute background
+         * @type Graphic
+         * @readOnly
+         */
+        background: {
+            getter: function()
+            {
+                if(!this._background)
+                {
+                    this._backgroundGraphic = new Y.Graphic({render:this.get("contentBox")});
+                    this._backgroundGraphic.get("node").style.zIndex = -2;
+                    this._background = this._backgroundGraphic.addShape({type: "rect"});
+                }
+                return this._background;
+            }
+        },
+
+        /**
+         * Reference to graphic instance used for gridlines.
+         *
+         * @attribute gridlines
+         * @type Graphic
+         * @readOnly
+         */
+        gridlines: {
+            readOnly: true,
+
+            getter: function()
+            {
+                if(!this._gridlines)
+                {
+                    this._gridlinesGraphic = new Y.Graphic({render:this.get("contentBox")});
+                    this._gridlinesGraphic.get("node").style.zIndex = -1;
+                    this._gridlines = this._gridlinesGraphic.addShape({type: "path"});
+                }
+                return this._gridlines;
+            }
+        },
+        
+        /**
+         * Reference to graphic instance used for series.
+         *
+         * @attribute graphic
+         * @type Graphic
+         * @readOnly
+         */
+        graphic: {
+            readOnly: true,
+
+            getter: function() 
+            {
+                if(!this._graphic)
+                {
+                    this._graphic = new Y.Graphic({render:this.get("contentBox")});
+                    this._graphic.set("autoDraw", false);
+                }
+                return this._graphic;
             }
         }
 
         /**
          * Style properties used for drawing a background. Below are the default values:
          *  <dl>
-         *      <dt>fill</dt><dd>A hash containing the following values:
+         *      <dt>background</dt><dd>An object containing the following values:
          *          <dl>
-         *              <dt>color</dt><dd>Color of the fill. The default value is #faf9f2.</dd>
-         *              <dt>alpha</dt><dd>Number from 0 to 1 indicating the opacity of the background fill. The default value is 1.</dd>
-         *          </dl>
-         *      </dd>
-         *      <dt>border</dt><dd>A hash containing the following values:
-         *          <dl>
-         *              <dt>color</dt><dd>Color of the border. The default value is #dad8c9.</dd>
-         *              <dt>alpha</dt><dd>Number from 0 to 1 indicating the opacity of the background border. The default value is 1.</dd>
-         *              <dt>weight</dt><dd>Number indicating the width of the border. The default value is 1.</dd>
+         *              <dt>fill</dt><dd>Defines the style properties for the fill. Contains the following values:
+         *                  <dl>
+         *                      <dt>color</dt><dd>Color of the fill. The default value is #faf9f2.</dd>
+         *                      <dt>alpha</dt><dd>Number from 0 to 1 indicating the opacity of the background fill. The default value is 1.</dd>
+         *                  </dl>
+         *              </dd>
+         *              <dt>border</dt><dd>Defines the style properties for the border. Contains the following values:
+         *                  <dl>
+         *                      <dt>color</dt><dd>Color of the border. The default value is #dad8c9.</dd>
+         *                      <dt>alpha</dt><dd>Number from 0 to 1 indicating the opacity of the background border. The default value is 1.</dd>
+         *                      <dt>weight</dt><dd>Number indicating the width of the border. The default value is 1.</dd>
+         *                  </dl>
+         *              </dd>
          *          </dl>
          *      </dd>
          *  </dl>

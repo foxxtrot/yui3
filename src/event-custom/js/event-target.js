@@ -125,6 +125,7 @@ var L = Y.Lang,
 
 
 ET.prototype = {
+    constructor: ET,
 
     /**
      * Listen to a custom event hosted by this object one time.
@@ -145,6 +146,24 @@ ET.prototype = {
             }
         });
         return handle;
+    },
+
+    /**
+     * Listen to a custom event hosted by this object one time.
+     * This is the equivalent to <code>after</code> except the
+     * listener is immediatelly detached when it is executed.
+     * @method onceAfter
+     * @param type    {string}   The type of the event
+     * @param fn {Function} The callback
+     * @param context {object} optional execution context.
+     * @param arg* {mixed} 0..n additional arguments to supply to the subscriber
+     * @return the event target or a detach handle per 'chain' config
+     */
+    onceAfter: function() {
+        var args = YArray(arguments, 0, true);
+        args[0] = AFTER_PREFIX + args[0];
+
+        return this.once.apply(this, args);
     },
 
     /**
@@ -567,6 +586,11 @@ Y.log('EventTarget unsubscribeAll() is deprecated, use detachAll()', 'warn', 'de
      * turned on or off (publish can't be turned off before it
      * it published) by setting the events 'monitor' config.
      *
+     * @method _monitor
+     * @param what {String} 'attach', 'detach', 'fire', or 'publish'
+     * @param type {String} Name of the event being monitored
+     * @param o {Object} Information about the event interaction, such as
+     *                  fire() args, subscription category, publish config
      * @private
      */
     _monitor: function(what, type, o) {
@@ -739,11 +763,8 @@ Y.log('EventTarget unsubscribeAll() is deprecated, use detachAll()', 'warn', 'de
 Y.EventTarget = ET;
 
 // make Y an event target
-Y.mix(Y, ET.prototype, false, false, {
-    bubbles: false
-});
-
-ET.call(Y);
+Y.mix(Y, ET.prototype);
+ET.call(Y, { bubbles: false });
 
 YUI.Env.globalEvents = YUI.Env.globalEvents || new ET();
 

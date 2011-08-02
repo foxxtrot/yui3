@@ -336,12 +336,12 @@ YUI.add('dd-ddm-base', function(Y) {
     /**
     * @event ddm:start
     * @description Fires from the DDM before all drag events fire.
-    * @type {Event.Custom}
+    * @type {CustomEvent}
     */
     /**
     * @event ddm:end
     * @description Fires from the DDM after the DDM finishes, before the drag end events.
-    * @type {Event.Custom}
+    * @type {CustomEvent}
     */
 
 

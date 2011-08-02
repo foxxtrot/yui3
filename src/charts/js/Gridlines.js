@@ -8,36 +8,34 @@
  */
 Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
     /**
+     * Reference to the `Path` element used for drawing Gridlines.
+     *
+     * @property _path
+     * @type Path
      * @private
      */
-    render: function()
-    {
-        this._setCanvas();
-    },
+    _path: null,
 
     /**
+     * Removes the Gridlines.
+     *
+     * @method remove
      * @private
      */
     remove: function()
     {
-        var graphic = this.get("graphic"),
-            gNode;
-        if(graphic)
+        var path = this._path;
+        if(path)
         {
-            gNode = graphic.node;
-            if(gNode)
-            {
-                Y.one(gNode).remove();
-            }
+            path.destroy();
         }
     },
 
     /**
-     * @protected
-     *
      * Draws the gridlines
      *
      * @method draw
+     * @protected
      */
     draw: function()
     {
@@ -48,11 +46,14 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
     },
 
     /**
+     * Algorithm for drawing gridlines
+     *
+     * @method _drawGridlines
      * @private
      */
     _drawGridlines: function()
     {
-        var graphic = this.get("graphic"),
+        var path,
             axis = this.get("axis"),
             axisPosition = axis.get("position"),
             points,
@@ -85,57 +86,60 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
             points = axis.get("tickPoints");
             l = points.length;
         }
-        if(!graphic)
-        {
-            this._setCanvas();
-            graphic = this.get("graphic");
-        }
-        graphic.clear();
-        graphic.setSize(w, h);
-        graphic.lineStyle(weight, color, alpha);
+        path = graph.get("gridlines");
+        path.set("width", w);
+        path.set("height", h);
+        path.set("stroke", {
+            weight: weight,
+            color: color,
+            opacity: alpha
+        });
         for(; i < l; ++i)
         {
-            lineFunction(graphic, points[i], w, h);
+            lineFunction(path, points[i], w, h);
         }
-        graphic.end();
+        path.end();
     },
 
     /**
+     * Algorithm for horizontal lines.
+     *
+     * @method _horizontalLine
+     * @param {Path} path Reference to path element
+     * @param {Object} pt Coordinates corresponding to a major unit of an axis.
+     * @param {Number} w Width of the Graph
+     * @param {Number} h Height of the Graph
      * @private
      */
-    _horizontalLine: function(graphic, pt, w, h)
+    _horizontalLine: function(path, pt, w, h)
     {
-        graphic.moveTo(0, pt.y);
-        graphic.lineTo(w, pt.y);
+        path.moveTo(0, pt.y);
+        path.lineTo(w, pt.y);
     },
 
     /**
+     * Algorithm for vertical lines.
+     *
+     * @method _verticalLine
+     * @param {Path} path Reference to path element
+     * @param {Object} pt Coordinates corresponding to a major unit of an axis.
+     * @param {Number} w Width of the Graph
+     * @param {Number} h Height of the Graph
      * @private
      */
-    _verticalLine: function(graphic, pt, w, h)
+    _verticalLine: function(path, pt, w, h)
     {
-        graphic.moveTo(pt.x, 0);
-        graphic.lineTo(pt.x, h);
-    },
-
-    /**
-     * @private
-     * Creates a <code>Graphic</code> instance.
-     */
-    _setCanvas: function()
-    {
-        this.set("graphic", new Y.Graphic());
-        this.get("graphic").render(this.get("graph").get("contentBox"));
+        path.moveTo(pt.x, 0);
+        path.lineTo(pt.x, h);
     },
     
     /**
-     * @protected
-     *
-     * Gets the default value for the <code>styles</code> attribute. Overrides
+     * Gets the default value for the `styles` attribute. Overrides
      * base implementation.
      *
      * @method _getDefaultStyles
      * @return Object
+     * @protected
      */
     _getDefaultStyles: function()
     {
@@ -161,7 +165,7 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
         direction: {},
         
         /**
-         * Indicate the <code>Axis</code> in which to bind
+         * Indicate the `Axis` in which to bind
          * the gridlines.
          *
          * @attribute axis
@@ -170,7 +174,7 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
         axis: {},
         
         /**
-         * Indicates the <code>Graph</code> in which the gridlines 
+         * Indicates the `Graph` in which the gridlines 
          * are drawn.
          *
          * @attribute graph

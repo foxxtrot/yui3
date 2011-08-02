@@ -1,5 +1,17 @@
 /**
- * The Renderer class is a base class for chart components that use the <code>styles</code>
+ * The Charts widget provides an api for displaying data
+ * graphically.
+ *
+ * @module charts
+ */
+var DOCUMENT = Y.config.doc,
+    LeftAxisLayout,
+    RightAxisLayout,
+    BottomAxisLayout,
+    TopAxisLayout;
+
+/**
+ * The Renderer class is a base class for chart components that use the `styles`
  * attribute.
  *
  * @class Renderer
@@ -9,7 +21,7 @@ function Renderer(){}
 
 Renderer.ATTRS = {
         /**
-         * Hash of style properties for class
+         * Style properties for class
          * 
          * @attribute styles
          * @type Object
@@ -40,18 +52,21 @@ Renderer.NAME = "renderer";
 
 Renderer.prototype = {
     /**
+     * Storage for `styles` attribute.
+     *
+     * @property _styles
+     * @type Object
      * @private
      */
 	_styles: null,
 	
     /**
-     * @protected
-     *
-     * Method used by <code>styles</code> setter.
+     * Method used by `styles` setter.
      *
      * @method _setStyles
      * @param {Object} newStyles Hash of properties to update.
      * @return Object
+     * @protected
      */
 	_setStyles: function(newstyles)
 	{
@@ -60,8 +75,6 @@ Renderer.prototype = {
 	},
     
     /**
-     * @protected
-     *
      * Merges to object literals so that only specified properties are 
      * overwritten.
      *
@@ -69,6 +82,7 @@ Renderer.prototype = {
      * @param {Object} a Hash of new styles
      * @param {Object} b Hash of original styles
      * @return Object
+     * @protected
      */
     _mergeStyles: function(a, b)
     {
@@ -92,12 +106,11 @@ Renderer.prototype = {
     },
 
     /**
-     * @protected
-     *
-     * Gets the default value for the <code>styles</code> attribute. 
+     * Gets the default value for the `styles` attribute. 
      *
      * @method _getDefaultStyles
      * @return Object
+     * @protected
      */
     _getDefaultStyles: function()
     {

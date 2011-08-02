@@ -1,16 +1,12 @@
 YUI.add('editor-bidi', function(Y) {
 
-
-    /**
-     * Plugin for Editor to support BiDirectional (bidi) text operations.
-     * @module editor
-     * @submodule editor-bidi
-     */     
     /**
      * Plugin for Editor to support BiDirectional (bidi) text operations.
      * @class Plugin.EditorBidi
      * @extends Base
      * @constructor
+     * @module editor
+     * @submodule editor-bidi
      */
 
 
@@ -243,11 +239,13 @@ YUI.add('editor-bidi', function(Y) {
         * @method removeTextAlign
         */
         removeTextAlign: function(n) {
-            if (n.getAttribute(STYLE).match(EditorBidi.RE_TEXT_ALIGN)) {
-     	 		n.setAttribute(STYLE, n.getAttribute(STYLE).replace(EditorBidi.RE_TEXT_ALIGN, ''));
-     	 	}
-            if (n.hasAttribute('align')) {
-                n.removeAttribute('align');
+            if (n) {
+                if (n.getAttribute(STYLE).match(EditorBidi.RE_TEXT_ALIGN)) {
+                    n.setAttribute(STYLE, n.getAttribute(STYLE).replace(EditorBidi.RE_TEXT_ALIGN, ''));
+                }
+                if (n.hasAttribute('align')) {
+                    n.removeAttribute('align');
+                }
             }
             return n;
         }
@@ -276,6 +274,9 @@ YUI.add('editor-bidi', function(Y) {
         }
 
         inst.Selection.filterBlocks();
+        if (sel.anchorNode.test(BODY)) {
+            return;
+        }
         if (sel.isCollapsed) { // No selection
             block = EditorBidi.blockParent(sel.anchorNode);
             //Remove text-align attribute if it exists

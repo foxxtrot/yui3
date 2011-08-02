@@ -242,4 +242,5 @@ YUI.add('dd-proxy', function(Y) {
     //Create the frame when DOM is ready
     //Y.on('domready', Y.bind(DDM._createFrame, DDM));
 
+
 }, '@VERSION@' ,{requires:['dd-ddm', 'dd-drag'], skinnable:false});

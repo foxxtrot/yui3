@@ -1,149 +1,144 @@
-var suite = new Y.Test.Suite("Y.JSONPRequest and Y.jsonp with jsonp-url");
+var suite = new Y.Test.Suite("Y.JSONPRequest and Y.jsonp with jsonp-url"),
+    // Dirty dirty hack to future proof duck type for onload where
+    // possible
+    onScriptLoad = (function () {
+        var onload = true,
+            onrsc = true;
+
+        return function (node, callback) {
+            var loaded = false;
+
+            if (onload) {
+                node.onload = function () {
+                    // prefer onload to onreadystatechange
+                    onload = true;
+                    this.onload = this.onreadystatechange = onrsc = null;
+                    if (!loaded) {
+                        callback();
+                        loaded = true;
+                    }
+                };
+            }
+            if (onrsc) {
+                node.onreadystatechange = function () {
+                    if (!('loaded|complete'.indexOf(this.readyState) % 7)) {
+                        // assume no onload support until onload says so.
+                        // this leaks one onload function.
+                        this.onreadystatechange = null;
+                        // just in case onload fired first (which it shouldn't)
+                        if (onrsc && !loaded) {
+                            onload = false;
+                            callback();
+                            loaded = true;
+                        }
+                    }
+                };
+            }
+        };
+    })();
 
 suite.add(new Y.Test.Case({
-    name : "Complex callback path in URL (jsonp-url)",
+    name: "send",
+
+    "config charset should be set via Y.Get.script": function () {
+        var test = this,
+            scripts = Y.all('script')._nodes,
+            newScript;
+
+        Y.jsonp("server/service.php?callback={callback}", function () {});
+
+        newScript = Y.Array.filter(Y.all('script')._nodes, function (s) {
+            return Y.Array.indexOf(scripts, s) === -1;
+        })[0];
+
+        Y.Assert.areSame("utf-8", newScript.charset);
+
+        scripts.push(newScript);
+
+        Y.jsonp("server/service.php?callback={callback}", {
+            on: {
+                success: function () {}
+            },
+            charset: "GBK"
+        });
+
+        newScript = Y.Array.filter(Y.all('script')._nodes, function (s) {
+            return Y.Array.indexOf(scripts, s) === -1;
+        })[0];
+
+        Y.Assert.areSame("GBK", newScript.getAttribute("charset"));
+
+        // to allow JSONP the chance to clean up the callback registry
+        // before other tests begin.  Race condition, yes.  The alternative
+        // was to wait() and resume() in the success callback, but for some
+        // reason Test.Runner cleared the test's wait timer before the
+        // success callback, so either the test fails because resume() is
+        // called when Test.Runner doesn't think it's waiting, OR the test
+        // fails if resume() is only called if Test.Runner thinks it is waiting
+        // (which it doesn't) so resume() is never called.
+        test.wait(function () {}, 1000);
+    },
+
+    "config attributes should be set via Y.Get.script": function () {
+        var test = this,
+            scripts = Y.all('script')._nodes,
+            newScript;
+
+        Y.jsonp("server/service.php?callback={callback}", {
+            on: {
+                success: function () { test.resume(); }
+            },
+            attributes: {
+                // passing an attribute that is less likely to be skipped over
+                // by browser whitelisting (if they do that now or will later)
+                language: "javascript"
+            }
+        });
+
+        newScript = Y.Array.filter(Y.all('script')._nodes, function (s) {
+            return Y.Array.indexOf(scripts, s) === -1;
+        })[0];
+
+        Y.Assert.areSame("javascript", newScript.getAttribute("language"));
+
+        // to allow JSONP the chance to clean up the callback registry before
+        // other tests begin.
+        test.wait();
+    }
+}));
+
+suite.add(new Y.Test.Case({
+    name : "callbacks",
         
-    "complex nested callback in URL should be executed": function () {
-        var self = this;
-
-        Y.config.win.deeply = [
-            null,
-            null,
-            {
-                nested: {
-                    global: {
-                        func: {
-                            tion: function (json) {
-                                self.resume(function () {
-                                    Y.config.win.deeply = undefined;
-                                    Y.Assert.isObject(json);
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        ];
-
-        Y.jsonp('server/service.php?callback=deeply[2].nested["global"].func["tion"]');
-
-        self.wait();
+    _should: {
+        ignore: {
+            // Get (v3.3) doesn't support onerror in recent webkit
+            "failure handler in callback object should execute": true
+        }
     },
 
-    "callback relative to Y should be executed": function () {
+    "callback function as second arg should be success handler": function () {
         var self = this;
 
-        Y.callbackFunction = function (json) {
+        Y.jsonp("server/service.php?&callback={callback}", function (json) {
+            //console.log(Y.Object.keys(YUI.Env.JSONP), "callback function as second arg should be success handler");
             self.resume(function () {
-                delete Y.callbackFunction;
                 Y.Assert.isObject(json);
-            });
-        };
-        Y.jsonp("server/service.php?callback=callbackFunction");
-
-        self.wait();
-    },
-
-    "nested inline callback relative to Y should be executed": function () {
-        var self = this;
-
-        Y.deeply = [
-            null,
-            null,
-            {
-                nested: {
-                    global: {
-                        func: {
-                            tion: function (json) {
-                                self.resume(function () {
-                                    delete Y.deeply;
-                                    Y.Assert.isObject(json);
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        ];
-
-        Y.jsonp('server/service.php?callback=deeply[2].nested["global"].func["tion"]');
-        self.wait();
-    },
-
-    "inline callback including 'Y.' should be executed": function () {
-        var self = this;
-
-        Y.callbackFunction = function (json) {
-            self.resume(function () {
-                delete Y.callbackFunction;
-                Y.Assert.isObject(json);
-            });
-        };
-        Y.jsonp("server/service.php?callback=Y.callbackFunction");
-
-        self.wait();
-    },
-
-    "inline callback should be replaced if function passed": function () {
-        var self = this;
-
-        Y.deeply = [
-            null,
-            null,
-            {
-                nested: {
-                    global: {
-                        func: {
-                            tion: function (json) {
-                                self.resume(function () {
-                                    delete Y.deeply;
-                                    Y.Assert.fail("inline function should not be used");
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        ];
-
-        Y.jsonp('server/service.php?callback=deeply[2].nested["global"].func["tion"]', function (data) {
-            self.resume(function () {
-                delete Y.deeply;
-                Y.Assert.isObject(data);
             });
         });
 
         self.wait();
     },
 
-    "inline callback should be replaced if success function provided in config": function () {
+    "success handler in callback object should execute": function () {
         var self = this;
 
-        Y.deeply = [
-            null,
-            null,
-            {
-                nested: {
-                    global: {
-                        func: {
-                            tion: function (json) {
-                                self.resume(function () {
-                                    delete Y.deeply;
-                                    Y.Assert.fail("inline function should not be used");
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        ];
-
-        Y.jsonp('server/service.php?callback=deeply[2].nested["global"].func["tion"]', {
+        Y.jsonp("server/service.php?&callback={callback}", {
             on: {
-                success: function (data) {
+                success: function (json) {
+                    //console.log(Y.Object.keys(YUI.Env.JSONP), "success handler in callback object should execute");
                     self.resume(function () {
-                        delete Y.deeply;
-                        Y.Assert.isObject(data);
+                        Y.Assert.isObject(json);
                     });
                 }
             }
@@ -152,14 +147,103 @@ suite.add(new Y.Test.Case({
         self.wait();
     },
 
+    "failure handler in callback object should execute": function () {
+        var self = this;
+
+        Y.jsonp("server/404.php?&callback={callback}", {
+            on: {
+                success: function (json) {
+                    self.resume(function () {
+                        Y.Assert.fail("Success handler called from 404 response");
+                    });
+                },
+                failure: function () {
+                    //console.log("failure handler in callback object should execute");
+                    // Pass
+                    self.resume(function () {});
+                }
+            }
+        });
+
+        self.wait();
+    },
+
+    "failure handler in callback object should not execute for successful io": function () {
+        var self = this;
+
+        Y.jsonp("server/service.php?&callback={callback}", {
+            on: {
+                success: function (json) {
+                    //console.log(Y.Object.keys(YUI.Env.JSONP), "failure handler in callback object should not execute for successful io");
+                    // Pass
+                    self.resume(function () {});
+                },
+                failure: function () {
+                    self.resume(function () {
+                        Y.Assert.fail("Failure handler called after successful response");
+                    });
+                }
+            }
+        });
+
+        self.wait();
+    },
+
+    "test multiple send() from an instance of Y.JSONPRequest": function () {
+        var self = this,
+            count = 0,
+            service;
+
+        service = new Y.JSONPRequest("server/service.php?callback={callback}", {
+            on: {
+                success: function (json) {
+                    //console.log(Y.Object.keys(YUI.Env.JSONP), "test multiple send() from an instance of Y.JSONPRequest");
+                    if (++count === 3) {
+                        self.resume(function () {
+                            // Pass
+                            Y.Assert.areSame(count, 3);
+                        });
+                    }
+                }
+            }
+        });
+
+        service.send().send().send();
+
+        this.wait();
+    }
+
+    // failure for bogus response data (not yet implemented)
+    // missing {callback} (not sure how to test. No callback would be attached.
+    //      Maybe have the service create a property on YUI and have the test
+    //      look for that after a time?)
+    // missing success handler (logs a warning)
+    // JSONPRequest + send
+    // JSONPRequest + send with config overrides (not yet implemented)
+}));
+
+suite.add(new Y.Test.Case({
+    name : "context and args"
+        
+}));
+
+suite.add(new Y.Test.Case({
+    name : "format"
+        
+}));
+
+suite.add(new Y.Test.Case({
+    name : "allowCache",
+        
     "allowCache should preserve the same callback": function () {
         var test = this,
             remaining = 2,
             callback,
-            jsonp = new Y.JSONPRequest('server/service.php?callback={callback}', {
+            jsonp = new Y.JSONPRequest('server/service.php?&callback={callback}', {
                 allowCache: true,
                 on: {
                     success: function (data) {
+                        //console.log(Y.Object.keys(YUI.Env.JSONP), "allowCache should preserve the same callback");
                         if (callback) {
                             if (callback !== data.callback) {
                                 test.resume(function () {
@@ -190,10 +274,11 @@ suite.add(new Y.Test.Case({
     function () {
         var test = this,
             callbacks = [],
-            jsonp = new Y.JSONPRequest('server/service.php?callback={callback}', {
+            jsonp = new Y.JSONPRequest('server/service.php?&callback={callback}', {
                 allowCache: true,
                 on: {
                     success: function (data) {
+                        //console.log(Y.Object.keys(YUI.Env.JSONP), "allowCache should not clear proxy if another send() is pending response");
                         callbacks.push(data.callback);
 
                         if (callbacks.length > 2) {
@@ -217,21 +302,28 @@ suite.add(new Y.Test.Case({
         jsonp.send();
 
         this.wait();
-    },
+    }
 
+}));
+
+suite.add(new Y.Test.Case({
+    name : "timeout",
+        
     "timeout should not flush the global proxy": function () {
         var test = this,
             timeoutCalled = false,
-            jsonpProxies = Y.Object.keys(Y.Env.JSONP).length,
-            jsonp = new Y.JSONPRequest('server/service.php?wait=2&callback={callback}', {
+            jsonpProxies = Y.Object.keys(YUI.Env.JSONP).length,
+            jsonp = new Y.JSONPRequest('server/service.php?&wait=2&callback={callback}', {
                 timeout: 1000,
                 on: {
                     success: function (data) {
+                        //console.log(Y.Object.keys(YUI.Env.JSONP), "timeout should not flush the global proxy");
                         test.resume(function () {
                             Y.Assert.fail("Success callback executed after timeout");
                         });
                     },
                     timeout: function () {
+                        //console.log(Y.Object.keys(YUI.Env.JSONP), "timeout should not flush the global proxy (timeout)");
                         timeoutCalled = true;
                     }
                 }
@@ -253,17 +345,25 @@ suite.add(new Y.Test.Case({
             return Y.Array.indexOf(scripts, s) === -1;
         })[0];
 
-        Y.on('load', function () {
-            test.resume(function () {
-                Y.Assert.isTrue(timeoutCalled);
-                Y.Assert.areSame(jsonpProxies, Y.Object.keys(Y.Env.JSONP).length);
-            });
-        }, newScript);
+        onScriptLoad(newScript, function () {
+            //console.log("__yui_wait: " + test.__yui_wait + " (should be a setTimeout int)");
+            // If the success callback is triggered, it will resume the test,
+            // and clear the wait() timeout, so having another resume() here
+            // will just blow up.  The test has already failed if !_waiting
+            if (Y.Test.Runner._waiting) {
+                test.resume(function () {
+                    Y.Assert.isTrue(timeoutCalled);
+                    Y.Assert.areSame(jsonpProxies, Y.Object.keys(YUI.Env.JSONP).length);
+                });
+            }
+        });
 
         test.wait(3000);
     }
 
     /*
+    ,
+
     "timeout should not flush the global proxy across multiple send calls": function () {
         // README
         // Stubbed from the test above.  This test needs to contact the

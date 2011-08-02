@@ -1,10 +1,7 @@
-// Not sure why the module isn't getting included
-if (!Y.Node.prototype.simulate) {
-    Y.Node.prototype.simulate = function(type, options) {
-        Y.Event.simulate(this._node, type, options);
-    };
-}
-Y.Node.prototype.click = function () { this.simulate('click'); };
+Y.Node.prototype.click = function (options) {
+    Y.Event.simulate(this._node, 'click', options);
+};
+Y.NodeList.importMethod(Y.Node.prototype, 'click');
 
 
 
@@ -116,7 +113,7 @@ suite.add(new Y.Test.Case({
         Y.Assert.isNotUndefined(Y.Node.DOM_EVENTS.mouseout);
     },
 
-    "Y.Event.define should register a new synth in DOM_EVENTS": function () {
+    "Y.Event.define(type, {...}) should register a new synth in DOM_EVENTS": function () {
         Y.Event.define('synth', {
             index: 0
         });
@@ -141,7 +138,32 @@ suite.add(new Y.Test.Case({
         }, true);
 
         areSame(2, Y.Node.DOM_EVENTS.synth.eventDef.index);
+    },
+
+    "Y.Event.define({ type: ...}) should register a new synth in DOM_EVENTS": function () {
+        delete Y.Node.DOM_EVENTS.synth;
+
+        Y.Event.define({
+            type: 'synth',
+            index: 3
+        });
+
+        Y.Assert.isNotUndefined(Y.Node.DOM_EVENTS.synth);
+        Y.Assert.isNotUndefined(Y.Env.evt.plugins.synth);
+        Y.Assert.isNotUndefined(Y.Node.DOM_EVENTS.synth.eventDef);
+        areSame(Y.Node.DOM_EVENTS.synth, Y.Env.evt.plugins.synth);
+        areSame(3, Y.Node.DOM_EVENTS.synth.eventDef.index);
+    },
+
+    "Y.Event.define({...}, true) should overwrite existing synth": function () {
+        Y.Event.define({
+            type: 'synth',
+            index: 2
+        }, true);
+
+        areSame(2, Y.Node.DOM_EVENTS.synth.eventDef.index);
     }
+
 }));
 
 suite.add(new Y.Test.Case({
@@ -1731,6 +1753,18 @@ suite.add(new Y.Test.Case({
     setUp: setUp,
     tearDown: tearDown,
 
+    _should: {
+        fail: {
+            // TODO: Can this be made to work?
+            "test nodelist.on('cat|__', fn) + nodelist.detach('cat|___')": true,
+            "test nodelist.on('cat|__', fn) + nodelist.detach('cat|___', fn)": true,
+            "test nodelist.on('cat|__', fn) + node.detach('cat|*')": true,
+            "test Y.on('cat|__', fn, multiSelector) + nodelist.detach('cat|___')": true,
+            "test Y.on('cat|__', fn, multiSelector) + nodelist.detach('cat|___', fn)": true,
+            "test Y.on('cat|__', fn, multiSelector) + node.detach('cat|*')": true
+        }
+    },
+
     "test node.on() + node.detach(synth, fn)": function () {
         var count = 0,
             target = Y.one('#button1');
@@ -2399,21 +2433,345 @@ suite.add(new Y.Test.Case({
         items.item(2).click();
 
         areSame(3, count);
+    },
+
+    "test node.on('cat|__', fn) + node.detach('cat|___')": function () {
+        var count = 0,
+            item = Y.one('#button1');
+
+        function increment() {
+            count++;
+        }
+
+        item.on('cat|synth', increment);
+
+        item.click();
+
+        areSame(1, count);
+
+        item.detach('cat|synth');
+
+        item.click();
+
+        areSame(1, count);
+    },
+
+    "test node.on('cat|__', fn) + node.detach('cat|___', fn)": function () {
+        var count = 0,
+            item = Y.one('#button1');
+
+        function increment() {
+            count++;
+        }
+
+        item.on('cat|synth', increment);
+
+        item.click();
+
+        areSame(1, count);
+
+        item.detach('cat|synth', increment);
+
+        item.click();
+
+        areSame(1, count);
+    },
+
+    "test node.on('cat|__', fn) + node.detach('cat|*')": function () {
+        var count = 0,
+            item = Y.one('#button1');
+
+        function increment() {
+            count++;
+        }
+
+        item.on('cat|synth', increment);
+
+        item.click();
+
+        areSame(1, count);
+
+        item.detach('cat|*');
+
+        item.click();
+
+        areSame(1, count);
+    },
+
+    "test Y.on('cat|__', fn, sel) + node.detach('cat|___')": function () {
+        var count = 0,
+            item = Y.one('#button1');
+
+        function increment() {
+            count++;
+        }
+
+        Y.on('cat|synth', increment, '#button1');
+
+        item.click();
+
+        areSame(1, count);
+
+        item.detach('cat|synth');
+
+        item.click();
+
+        areSame(1, count);
+    },
+
+    "test Y.on('cat|__', fn, sel) + node.detach('cat|___', fn)": function () {
+        var count = 0,
+            item = Y.one('#button1');
+
+        function increment() {
+            count++;
+        }
+
+        Y.on('cat|synth', increment, '#button1');
+
+        item.click();
+
+        areSame(1, count);
+
+        item.detach('cat|synth', increment);
+
+        item.click();
+
+        areSame(1, count);
+    },
+
+    "test Y.on('cat|__', fn) + node.detach('cat|*')": function () {
+        var count = 0,
+            item = Y.one('#button1');
+
+        function increment() {
+            count++;
+        }
+
+        Y.on('cat|synth', increment, '#button1');
+
+        item.click();
+
+        areSame(1, count);
+
+        item.detach('cat|*');
+
+        item.click();
+
+        areSame(1, count);
+    },
+
+    "test nodelist.on('cat|__', fn) + nodelist.detach('cat|___')": function () {
+        var count = 0,
+            items = Y.all('#inner p');
+
+        function increment() {
+            count++;
+        }
+
+        items.on('cat|synth', increment);
+
+        items.click();
+
+        areSame(5, count);
+
+        items.detach('cat|synth');
+
+        items.click();
+
+        areSame(5, count);
+    },
+
+    "test nodelist.on('cat|__', fn) + nodelist.detach('cat|___', fn)": function () {
+        var count = 0,
+            items = Y.all('#inner p');
+
+        function increment() {
+            count++;
+        }
+
+        items.on('cat|synth', increment);
+
+        items.click();
+
+        areSame(5, count);
+
+        items.detach('cat|synth', increment);
+
+        items.click();
+
+        areSame(5, count);
+    },
+
+    "test nodelist.on('cat|__', fn) + node.detach('cat|*')": function () {
+        var count = 0,
+            items = Y.all('#inner p');
+
+        function increment() {
+            count++;
+        }
+
+        items.on('cat|synth', increment);
+
+        items.click();
+
+        areSame(5, count);
+
+        items.detach('cat|*');
+
+        items.click();
+
+        areSame(5, count);
+    },
+
+    "test Y.on('cat|__', fn, multiSelector) + nodelist.detach('cat|___')": function () {
+        var count = 0,
+            items = Y.all('#inner p');
+
+        function increment() {
+            count++;
+        }
+
+        Y.on('cat|synth', increment, '#inner p');
+
+        items.click();
+
+        areSame(5, count);
+
+        items.detach('cat|synth');
+
+        items.click();
+
+        areSame(5, count);
+    },
+
+    "test Y.on('cat|__', fn, multiSelector) + nodelist.detach('cat|___', fn)": function () {
+        var count = 0,
+            items = Y.all('#inner p');
+
+        function increment() {
+            count++;
+        }
+
+        Y.on('cat|synth', increment, '#inner p');
+
+        items.click();
+
+        areSame(5, count);
+
+        items.detach('cat|synth', increment);
+
+        items.click();
+
+        areSame(5, count);
+    },
+
+    "test Y.on('cat|__', fn, multiSelector) + node.detach('cat|*')": function () {
+        var count = 0,
+            items = Y.all('#inner p');
+
+        function increment() {
+            count++;
+        }
+
+        Y.on('cat|synth', increment, '#inner p');
+
+        items.click();
+
+        areSame(5, count);
+
+        items.detach('cat|*');
+
+        items.click();
+
+        areSame(5, count);
     }
-
-    // node.on + category detach
-    // Y.on + detach
-    // Y.on + handle.detach
-    // Y.on + category detach
-
+    // Y.on('cat|_', fn, multiSelector) + nodelist.detach('cat|_'[, fn]);
 }));
 
 suite.add(new Y.Test.Case({
     name: "processArgs",
 
-    setUp: setUp,
-    tearDown: tearDown
+    setUp: function () {
+        initTestbed();
 
+        var config = {
+            processArgs: function (args, delegate) {
+               return [args.splice(3,1)[0], delegate];
+            },
+
+            on: function (node, sub, notifier, filter) {
+                var method = (filter) ? 'delegate' : 'on';
+
+                sub._handle = node[method]('click', function (e) {
+                    e.sub = sub;
+                    notifier.fire(e);
+                }, filter);
+            },
+
+            detach: function (node, sub) {
+                sub._handle.detach();
+            }
+        };
+        config.delegate = config.on;
+        config.detachDelegate = config.detach;
+
+        Y.Event.define('synth', config, true);
+    },
+    tearDown: tearDown,
+
+    "test Y.on('synth', fn, selector, extra)": function () {
+        var test = this,
+            target = Y.one("#item3"),
+            type, currentTarget, thisObj, extra, callbackArgs;
+
+        Y.on('synth', function (e) {
+            type = e.type;
+            currentTarget = e.currentTarget;
+            thisObj = this;
+            extra = e.sub._extra[0];
+            callbackArgs = arguments.length;
+        }, '#item3', 'EXTRA');
+
+        target.click();
+
+        areSame('synth', type);
+        areSame(target, currentTarget);
+        areSame(target, thisObj);
+        areSame('EXTRA', extra);
+        areSame(1, callbackArgs);
+    },
+
+    "Y.on('synth', fn, '#not-here-yet', extra) should resubscribe with original arguments": function () {
+        var test = this,
+            target, type, currentTarget, thisObj, extra, callbackArgs;
+
+        Y.on('synth', function (e) {
+            type = e.type;
+            currentTarget = e.currentTarget;
+            thisObj = this;
+            extra = e.sub._extra[0];
+            callbackArgs = arguments.length;
+        }, '#item4', 'EXTRA');
+
+        setTimeout(function () {
+            target = Y.Node.create('<li id="item4"><p>Item 4</p></li>');
+            Y.one(".nested").append(target);
+
+            setTimeout(function () {
+                test.resume(function () {
+                    target.click();
+                    areSame('synth', type);
+                    areSame(target, currentTarget);
+                    areSame(target, thisObj);
+                    areSame('EXTRA', extra);
+                    areSame(1, callbackArgs);
+                });
+            }, 300);
+        }, 100);
+
+        test.wait(3000);
+    }
 
 }));
 

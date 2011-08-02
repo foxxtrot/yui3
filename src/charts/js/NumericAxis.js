@@ -25,12 +25,15 @@ NumericAxis.ATTRS = {
 	},
     
     /**
-     * Formats a label.
+     * Method used for formatting a label. This attribute allows for the default label formatting method to overridden. The method use would need
+     * to implement the arguments below and return a `String`.
+     * <dl>
+     *      <dt>val</dt><dd>Label to be formatted. (`String`)</dd>
+     *      <dt>format</dt><dd>Object containing properties used to format the label. (optional)</dd>
+     * </dl>
      *
      * @attribute labelFunction
      * @type Function
-     * @param {Object} val Value to be formatted. 
-     * @param {Object} format Hasho of properties used to format the label.
      */
     labelFunction: { 
         value: function(val, format)
@@ -44,7 +47,7 @@ NumericAxis.ATTRS = {
     },
 
     /**
-     * Hash of properties used by the <code>labelFunction</code> to format a
+     * Object containing properties used by the `labelFunction` to format a
      * label.
      *
      * @attribute labelFormat
@@ -64,11 +67,41 @@ NumericAxis.ATTRS = {
 Y.extend(NumericAxis, Y.AxisType,
 {
     /**
+     * Type of data used in `Axis`.
+     *
+     * @property _type
+     * @readOnly
      * @private
      */
     _type: "numeric",
 
     /**
+     * Returns a value based of a key value and an index.
+     *
+     * @method getKeyValueAt
+     * @param {String} key value used to look up the correct array
+     * @param {Number} index within the array
+     * @return Object
+     */
+    getKeyValueAt: function(key, index)
+    {
+        var value = NaN,
+            keys = this.get("keys");
+        if(keys[key] && Y.Lang.isNumber(parseFloat(keys[key][index])))
+        {
+            value = keys[key][index];
+        }
+        return value;
+    },
+
+    /**
+     * Helper method for getting a `roundingUnit` when calculating the minimum and maximum values.
+     *
+     * @method _getMinimumUnit
+     * @param {Number} max Maximum number
+     * @param {Number} min Minimum number
+     * @param {Number} units Number of units on the axis
+     * @return Number
      * @private
      */
     _getMinimumUnit:function(max, min, units)
@@ -77,6 +110,11 @@ Y.extend(NumericAxis, Y.AxisType,
     },
 
     /**
+     * Calculates a nice rounding unit based on the range.
+     *
+     * @method _getNiceNumber
+     * @param {Number} roundingUnit The calculated rounding unit.
+     * @return Number
      * @private
      */
     _getNiceNumber: function(roundingUnit)
@@ -104,7 +142,10 @@ Y.extend(NumericAxis, Y.AxisType,
     },
 
     /**
-     * @private
+     * Calculates the maximum and minimum values for the `Axis`.
+     *
+     * @method _updateMinAndMax
+     * @private 
      */
     _updateMinAndMax: function()
     {
@@ -132,6 +173,7 @@ Y.extend(NumericAxis, Y.AxisType,
                         {
                             if(Y.Lang.isObject(num))
                             {
+                                min = max = 0;
                                 //hloc values
                                 for(key in num)
                                 {
@@ -142,6 +184,8 @@ Y.extend(NumericAxis, Y.AxisType,
                                    }
                                 }
                             }
+                            max = setMax ? this._setMaximum : max;
+                            min = setMin ? this._setMinimum : min;
                             continue;
                         }
                         max = setMax ? this._setMaximum : Math.max(num, max);
@@ -154,6 +198,11 @@ Y.extend(NumericAxis, Y.AxisType,
     },
 
     /**
+     * Rounds the mimimum and maximum values based on the `roundingUnit` attribute.
+     *
+     * @method _roundMinAndMax
+     * @param {Number} min Minimum value
+     * @param {Number} max Maximum value
      * @private
      */
     _roundMinAndMax: function(min, max)
@@ -376,10 +425,14 @@ Y.extend(NumericAxis, Y.AxisType,
     },
 
     /**
-     * @private
-     *
      * Rounds a Number to the nearest multiple of an input. For example, by rounding
      * 16 to the nearest 10, you will receive 20. Similar to the built-in function Math.round().
+     *
+     * @method _roundToNearest
+     * @param {Number} number Number to round
+     * @param {Number} nearest Multiple to round towards.
+     * @return Number
+     * @private
      */
     _roundToNearest: function(number, nearest)
     {
@@ -393,10 +446,14 @@ Y.extend(NumericAxis, Y.AxisType,
     },
 	
     /**
-     * @private
-     *
-     * Rounds a Number <em>up</em> to the nearest multiple of an input. For example, by rounding
+     * Rounds a Number up to the nearest multiple of an input. For example, by rounding
      * 16 up to the nearest 10, you will receive 20. Similar to the built-in function Math.ceil().
+     *
+     * @method _roundUpToNearest
+     * @param {Number} number Number to round
+     * @param {Number} nearest Multiple to round towards.
+     * @return Number
+     * @private
      */
     _roundUpToNearest: function(number, nearest)
     {
@@ -409,10 +466,14 @@ Y.extend(NumericAxis, Y.AxisType,
     },
 	
     /**
-     * @private
-     *
-     * Rounds a Number <em>down</em> to the nearest multiple of an input. For example, by rounding
+     * Rounds a Number down to the nearest multiple of an input. For example, by rounding
      * 16 down to the nearest 10, you will receive 10. Similar to the built-in function Math.floor().
+     *
+     * @method _roundDownToNearest
+     * @param {Number} number Number to round
+     * @param {Number} nearest Multiple to round towards.
+     * @return Number
+     * @private
      */
     _roundDownToNearest: function(number, nearest)
     {
@@ -425,10 +486,14 @@ Y.extend(NumericAxis, Y.AxisType,
     },
 
     /**
-     * @private
-     *
      * Rounds a number to a certain level of precision. Useful for limiting the number of
      * decimal places on a fractional number.
+     *
+     * @method _roundToPrecision
+     * @param {Number} number Number to round
+     * @param {Number} precision Multiple to round towards.
+     * @return Number
+     * @private
      */
     _roundToPrecision: function(number, precision)
     {

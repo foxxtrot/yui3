@@ -1,4 +1,22 @@
 {
-  "projectName"   : "YUI 3",
-  "projectVersion": "3.4.0-git"
+    "projectName": "YUI 3",
+
+    "apiDocs": "http://stage.yuilibrary.com/yui/docs/api",
+
+    "yuiBuildUrl"     : "build",
+    "yuiLocalBuildUrl": "build",
+    "yuiVersion"      : "3.4.0pr3",
+    "yuiSeedUrl"      : "build/yui/yui-min.js",
+
+    "componentDefaults": {
+        "yuiBuildUrl"     : "../build",
+        "yuiLocalBuildUrl": "../build",
+        "yuiSeedUrl"      : "../build/yui/yui-min.js"
+    },
+
+    "server": {
+        "staticPaths": [
+            "../../../"
+        ]
+    }
 }

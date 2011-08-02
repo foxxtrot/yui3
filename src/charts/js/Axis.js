@@ -1,12 +1,19 @@
 /**
  * The Axis class. Generates axes for a chart.
  *
+ * @module charts
  * @class Axis
- * @extends Renderer
+ * @extends Widget
+ * @uses Renderer
  * @constructor
+ * @param {Object} config (optional) Configuration parameters for the Chart.
  */
 Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     /**
+     * Handles change to the dataProvider
+     * 
+     * @method _dataChangeHandler
+     * @param {Object} e Event object
      * @private
      */
     _dataChangeHandler: function(e)
@@ -18,6 +25,10 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Handles changes to axis.
+     *
+     * @method _updateHandler
+     * @param {Object} e Event object
      * @private
      */
     _updateHandler: function(e)
@@ -29,44 +40,58 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
-     * @private
-     */
-    _positionChangeHandler: function(e)
-    {
-        var position = this.get("position");
-        if(position == "none")
-        {
-            return;
-        }
-        this._layout =this.getLayout(this.get("position"));
-        if(this.get("rendered"))
-        {
-            this._drawAxis();
-        }
-    },
-
-    /**
+     * @method renderUI
      * @private
      */
     renderUI: function()
     {
-        var pos = this.get("position");
+        var pos = this.get("position"),
+            layoutClass = this._layoutClasses[pos];
         if(pos && pos != "none")
         {
-            this._layout =this.getLayout(pos);
-            this._setCanvas();
+            this._layout = new layoutClass();
+            if(this._layout)
+            {
+                this._setCanvas();
+            }
         }
     },
    
     /**
+     * @method syncUI
      * @private
      */
     syncUI: function()
     {
+        var layout = this._layout,
+            defaultMargins,
+            styles,
+            label,
+            title,
+            i;
+        if(layout)
+        {
+            defaultMargins = layout._getDefaultMargins();
+            styles = this.get("styles");
+            label = styles.label.margin;
+            title =styles.title.margin;
+            //need to defaultMargins method to the layout classes.
+            for(i in defaultMargins)
+            {
+                if(defaultMargins.hasOwnProperty(i))
+                {
+                    label[i] = label[i] === undefined ? defaultMargins[i] : label[i];
+                    title[i] = title[i] === undefined ? defaultMargins[i] : title[i];
+                }
+            }
+        }
         this._drawAxis();
     },
 
     /**
+     * Creates a graphic instance to be used for the axis line and ticks.
+     *
+     * @method _setCanvas
      * @private
      */
     _setCanvas: function()
@@ -96,13 +121,12 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 	
     /**
-     * @protected
-     *
-     * Gets the default value for the <code>styles</code> attribute. Overrides
+     * Gets the default value for the `styles` attribute. Overrides
      * base implementation.
      *
      * @method _getDefaultStyles
      * @return Object
+     * @protected
      */
     _getDefaultStyles: function()
     {
@@ -140,10 +164,22 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
                 fontSize:"85%",
                 rotation: 0,
                 margin: {
-                    top:4,
-                    right:4,
-                    bottom:4,
-                    left:4
+                    top: undefined,
+                    right: undefined,
+                    bottom: undefined,
+                    left: undefined
+                }
+            },
+            title: {
+                color:"#808080",
+                alpha: 1,
+                fontSize:"85%",
+                rotation: undefined,
+                margin: {
+                    top: undefined,
+                    right: undefined,
+                    bottom: undefined,
+                    left: undefined
                 }
             },
             hideOverlappingLabelTicks: false
@@ -153,6 +189,10 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Updates the axis when the size changes.
+     *
+     * @method _handleSizeChange
+     * @param {Object} e Event object.
      * @private
      */
     _handleSizeChange: function(e)
@@ -169,49 +209,95 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
             this._drawAxis();
         }
     },
-
+   
     /**
+     * Maps key values to classes containing layout algorithms
+     *
+     * @property _layoutClasses
+     * @type Object
      * @private
      */
-    _layout: null,
-
-    /**
-     * @private 
-     */
-    getLayout: function(pos)
+    _layoutClasses: 
     {
-        var l;
-        switch(pos)
-        {
-            case "top" :
-                l = new Y.TopAxisLayout({axisRenderer:this});
-            break;
-            case "bottom" : 
-                l = new Y.BottomAxisLayout({axisRenderer:this});
-            break;
-            case "left" :
-                l = new Y.LeftAxisLayout({axisRenderer:this});
-            break;
-            case "right" :
-                l = new Y.RightAxisLayout({axisRenderer:this});
-            break;
-        }
-        return l;
+        top : TopAxisLayout,
+        bottom: BottomAxisLayout,
+        left: LeftAxisLayout,
+        right : RightAxisLayout
     },
     
     /**
+     * Draws a line segment between 2 points
+     *
+     * @method drawLine
+     * @param {Object} startPoint x and y coordinates for the start point of the line segment
+     * @param {Object} endPoint x and y coordinates for the for the end point of the line segment
+     * @param {Object} line styles (weight, color and alpha to be applied to the line segment)
      * @private
      */
     drawLine: function(startPoint, endPoint, line)
     {
-        var graphic = this.get("graphic");
-        graphic.lineStyle(line.weight, line.color, line.alpha);
-        graphic.moveTo(startPoint.x, startPoint.y);
-        graphic.lineTo(endPoint.x, endPoint.y);
-        graphic.end();
+        var path = this.get("path");
+        path.set("stroke", {
+            weight: line.weight, 
+            color: line.color, 
+            opacity: line.alpha
+        });
+        path.moveTo(startPoint.x, startPoint.y);
+        path.lineTo(endPoint.x, endPoint.y);
     },
 
     /**
+     * Generates the properties necessary for rotating and positioning a text field.
+     *
+     * @method _getTextRotationProps
+     * @param {Object} styles properties for the text field
+     * @return Object
+     * @private
+     */
+    _getTextRotationProps: function(styles)
+    {
+        if(styles.rotation === undefined)
+        {
+            switch(this.get("position"))
+            {
+                case "left" :
+                    styles.rotation = -90;
+                break; 
+                case "right" : 
+                    styles.rotation = 90;
+                break;
+                default :
+                    styles.rotation = 0;
+                break;
+            }
+        }
+        var rot =  Math.min(90, Math.max(-90, styles.rotation)),
+            absRot = Math.abs(rot),
+            radCon = Math.PI/180,
+            sinRadians = parseFloat(parseFloat(Math.sin(absRot * radCon)).toFixed(8)),
+            cosRadians = parseFloat(parseFloat(Math.cos(absRot * radCon)).toFixed(8)),
+            m11 = cosRadians,
+            m12 = rot > 0 ? -sinRadians : sinRadians,
+            m21 = -m12,
+            m22 = m11;
+        return {
+            rot: rot,
+            absRot: absRot,
+            radCon: radCon,
+            sinRadians: sinRadians,
+            cosRadians: cosRadians,
+            m11: m11,
+            m12: m12,
+            m21: m21,
+            m22: m22,
+            textAlpha: styles.alpha
+        };
+    },
+
+    /**
+     * Draws an axis. 
+     *
+     * @method _drawAxis
      * @private
      */
     _drawAxis: function ()
@@ -223,9 +309,10 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
         }
         this._drawing = true;
         this._callLater = false;
-        if(this.get("position") != "none")
+        if(this._layout)
         {
             var styles = this.get("styles"),
+                labelStyles = styles.label,
                 majorTickStyles = styles.majorTicks,
                 drawTicks = majorTickStyles.display != "none",
                 tickPoint,
@@ -233,19 +320,22 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
                 len,
                 majorUnitDistance,
                 i = 0,
+                layout = this._layout,
                 layoutLength,
                 position,
                 lineStart,
                 label,
-                layout = this._layout,
                 labelFunction = this.get("labelFunction"),
                 labelFunctionScope = this.get("labelFunctionScope"),
                 labelFormat = this.get("labelFormat"),
-                graphic = this.get("graphic");
-            graphic.clear();
-            layout.setTickOffsets();
+                graphic = this.get("graphic"),
+                path = this.get("path");
+            graphic.set("autoDraw", false);
+            path.clear();
+            this._labelRotationProps = this._getTextRotationProps(labelStyles);
+            layout.setTickOffsets.apply(this);
             layoutLength = this.getLength();
-            lineStart = layout.getLineStart();
+            lineStart = layout.getLineStart.apply(this);
             len = this.getTotalMajorUnits(majorUnit);
             majorUnitDistance = this.getMajorUnitDistance(len, layoutLength, majorUnit);
             this.set("edgeOffset", this.getEdgeOffset(len, layoutLength) * 0.5);
@@ -253,7 +343,7 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
             this.drawLine(lineStart, this.getLineEnd(tickPoint), styles.line);
             if(drawTicks) 
             {
-               layout.drawTick(tickPoint, majorTickStyles);
+               layout.drawTick.apply(this, [tickPoint, majorTickStyles]);
             }
             if(len < 1)
             {
@@ -262,28 +352,30 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
             }
             this._createLabelCache();
             this._tickPoints = [];
-            layout.set("maxLabelSize", 0); 
+            this.set("maxLabelSize", 0); 
+            this._titleSize = 0;
             for(; i < len; ++i)
             {
                 if(drawTicks) 
                 {
-                    layout.drawTick(tickPoint, majorTickStyles);
+                    layout.drawTick.apply(this, [tickPoint, majorTickStyles]);
                 }
                 position = this.getPosition(tickPoint);
-                label = this.getLabel(tickPoint);
+                label = this.getLabel(tickPoint, labelStyles);
                 label.innerHTML = labelFunction.apply(labelFunctionScope, [this.getLabelByIndex(i, len), labelFormat]);
                 tickPoint = this.getNextPoint(tickPoint, majorUnitDistance);
             }
             this._clearLabelCache();
-            layout.setSizeAndPosition();
+            this._updateTitle();
+            layout.setSizeAndPosition.apply(this);
             if(this.get("overlapGraph"))
             {
-               layout.offsetNodeForTick(this.get("contentBox"));
+               layout.offsetNodeForTick.apply(this, [this.get("contentBox")]);
             }
-            layout.setCalculatedSize();
+            layout.setCalculatedSize.apply(this);
             for(i = 0; i < len; ++i)
             {
-                layout.positionLabel(this.get("labels")[i], this._tickPoints[i]);
+                layout.positionLabel.apply(this, [this.get("labels")[i], this._tickPoints[i]]);
             }
         }
         this._drawing = false;
@@ -293,24 +385,89 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
         }
         else
         {
+            this._updatePathElement();
             this.fire("axisRendered");
         }
     },
 
     /**
-     * @private
+     *  Updates path.
+     *
+     *  @method _updatePathElement
+     *  @private
      */
-    _labels: null,
+    _updatePathElement: function()
+    {
+        var path = this.get("path"),
+            graphic = this.get("graphic");
+        if(path)
+        {
+            path.end();
+            graphic._redraw();
+        }
+    },
 
     /**
-     * @private 
-     */
-    _labelCache: null,
-
-    /**
+     * Updates the content and style properties for a title field.
+     *
+     * @method _updateTitle
      * @private
      */
-    getLabel: function(pt, pos)
+    _updateTitle: function()
+    {
+        var i,
+            styles,
+            customStyles,
+            title = this.get("title"),
+            titleTextField = this._titleTextField,
+            parentNode;
+        if(title !== null && title !== undefined)
+        {
+            customStyles = {
+                    rotation: "rotation",
+                    margin: "margin",
+                    alpha: "alpha"
+            };
+            styles = this.get("styles").title;
+            if(!titleTextField)
+            {
+                titleTextField = Y.config.doc.createElement('span');
+                titleTextField.setAttribute("class", "axisTitle");
+                this.get("contentBox").appendChild(titleTextField);
+            }
+            titleTextField.setAttribute("style", "display:block;white-space:nowrap;position:absolute;");
+            for(i in styles)
+            {
+                if(styles.hasOwnProperty(i) && !customStyles.hasOwnProperty(i))
+                {
+                    titleTextField.style[i] = styles[i];
+                }
+            }
+            titleTextField.innerHTML = title;
+            this._titleTextField = titleTextField;
+            this._layout.positionTitle.apply(this, [titleTextField]);
+        }
+        else if(titleTextField)
+        {
+            parentNode = titleTextField.parentNode;
+            if(parentNode)
+            {
+                parentNode.removeChild(titleTextField);
+            }
+            this._titleTextField = null;
+        }
+    },
+
+    /**
+     * Creates or updates an axis label.
+     *
+     * @method getLabel
+     * @param {Object} pt x and y coordinates for the label
+     * @param {Object} styles styles applied to label
+     * @return HTMLElement 
+     * @private
+     */
+    getLabel: function(pt, styles)
     {
         var i,
             label,
@@ -319,15 +476,14 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
                 margin: "margin",
                 alpha: "alpha"
             },
-            cache = this._labelCache,
-            styles = this.get("styles").label;
+            cache = this._labelCache;
         if(cache.length > 0)
         {
             label = cache.shift();
         }
         else
         {
-            label = document.createElement("span");
+            label = DOCUMENT.createElement("span");
             label.style.display = "block";
             label.style.whiteSpace = "nowrap";
             Y.one(label).addClass("axisLabel");
@@ -336,7 +492,7 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
         label.style.position = "absolute";
         this._labels.push(label);
         this._tickPoints.push({x:pt.x, y:pt.y});
-        this._layout.updateMaxLabelSize(label);
+        this._layout.updateMaxLabelSize.apply(this, [label]);
         for(i in styles)
         {
             if(styles.hasOwnProperty(i) && !customStyles.hasOwnProperty(i))
@@ -348,6 +504,9 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },   
 
     /**
+     * Creates a cache of labels that can be re-used when the axis redraws.
+     *
+     * @method _createLabelCache
      * @private
      */
     _createLabelCache: function()
@@ -371,6 +530,9 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
     
     /**
+     * Removes axis labels from the dom and clears the label cache.
+     *
+     * @method _clearLabelCache
      * @private
      */
     _clearLabelCache: function()
@@ -391,11 +553,10 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
-     * @private
-     */
-    _calculateSizeByTickLength: true,
-
-    /**
+     * Gets the end point of an axis.
+     *
+     * @method getLineEnd
+     * @return Object
      * @private 
      */
     getLineEnd: function(pt)
@@ -414,6 +575,10 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Calcuates the width or height of an axis depending on its direction.
+     *
+     * @method getLength
+     * @return Number
      * @private
      */
     getLength: function()
@@ -436,6 +601,11 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Gets the position of the first point on an axis.
+     *
+     * @method getFirstPoint
+     * @param {Object} pt Object containing x and y coordinates.
+     * @return Object
      * @private
      */
     getFirstPoint:function(pt)
@@ -456,6 +626,12 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Gets the position of the next point on an axis.
+     *
+     * @method getNextPoint
+     * @param {Object} point Object containing x and y coordinates.
+     * @param {Number} majorUnitDistance Distance in pixels between ticks.
+     * @return Object
      * @private
      */
     getNextPoint: function(point, majorUnitDistance)
@@ -473,6 +649,10 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Calculates the placement of last tick on an axis.
+     *
+     * @method getLastPoint
+     * @return Object
      * @private 
      */
     getLastPoint: function()
@@ -492,6 +672,10 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
     },
 
     /**
+     * Calculates position on the axis.
+     *
+     * @method getPosition
+     * @param {Object} point contains x and y values
      * @private 
      */
     getPosition: function(point)
@@ -520,17 +704,84 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
             p = point.x - padding.left;
         }
         return p;
+    },
+
+    /**
+     * Rotates and positions a text field.
+     *
+     * @method _rotate
+     * @param {HTMLElement} label text field to rotate and position
+     * @param {Object} props properties to be applied to the text field. 
+     * @private
+     */
+    _rotate: function(label, props)
+    {
+        var rot = props.rot,
+            x = props.x,
+            y = props.y,
+            absRot,
+            radCon,
+            sinRadians,
+            cosRadians,
+            m11,
+            m12,
+            m21,
+            m22,
+            filterString,
+            textAlpha;
+        if(Y.config.doc.createElementNS)
+        {
+            label.style.MozTransformOrigin =  "0 0";
+            label.style.MozTransform = "translate(" + x + "px," + y + "px) rotate(" + rot + "deg)";
+            label.style.webkitTransformOrigin = "0 0";
+            label.style.webkitTransform = "translate(" + x + "px," + y + "px) rotate(" + rot + "deg)";
+            label.style.msTransformOrigin =  "0 0";
+            label.style.msTransform = "translate(" + x + "px," + y + "px) rotate(" + rot + "deg)";
+            label.style.OTransformOrigin =  "0 0";
+            label.style.OTransform = "translate(" + x + "px," + y + "px) rotate(" + rot + "deg)";
+        }
+        else
+        {
+            textAlpha = props.textAlpha;
+            absRot = props.absRot;
+            radCon = props.radCon;
+            sinRadians = props.sinRadians;
+            cosRadians = props.cosRadians;
+            m11 = props.m11;
+            m12 = props.m12;
+            m21 = props.m21;
+            m22 = props.m22;
+            if(Y.Lang.isNumber(textAlpha) && textAlpha < 1 && textAlpha > -1 && !isNaN(textAlpha))
+            {
+                filterString = "progid:DXImageTransform.Microsoft.Alpha(Opacity=" + Math.round(textAlpha * 100) + ")";
+            }
+            if(rot !== 0)
+            {
+                if(filterString)
+                {
+                    filterString += " ";
+                }
+                else
+                {
+                    filterString = ""; 
+                }
+                filterString += 'progid:DXImageTransform.Microsoft.Matrix(M11=' + m11 + ' M12=' + m12 + ' M21=' + m21 + ' M22=' + m22 + ' sizingMethod="auto expand")';
+            }
+            if(filterString)
+            {
+                label.style.filter = filterString;
+            }
+        }
     }
 }, {
     ATTRS: 
     {
         /**
-         * @protected
-         *
          * Difference betweend the first/last tick and edge of axis.
          *
          * @attribute edgeOffset
          * @type Number
+         * @protected
          */
         edgeOffset: 
         {
@@ -544,7 +795,30 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
          * @type Graphic
          */
         graphic: {},
-        
+    
+        /**
+         *  @attribute path
+         *  @type Shape
+         *  @readOnly
+         *  @private
+         */
+        path: {
+            readOnly: true,
+
+            getter: function()
+            {
+                if(!this._path)
+                {
+                    var graphic = this.get("graphic");
+                    if(graphic)
+                    {
+                        this._path = graphic.addShape({type:"path"});
+                    }
+                }
+                return this._path;
+            }
+        },
+
         /**
          * Contains the contents of the axis. 
          *
@@ -560,8 +834,6 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
          * @type String
          */
         position: {
-            lazyAdd: false,
-
             setOnce: true,
 
             setter: function(val)
@@ -673,17 +945,42 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
          * @attribute labelFunctionScope
          * @type Object
          */
-        labelFunctionScope: {}
+        labelFunctionScope: {},
+        
+        /**
+         * Length in pixels of largest text bounding box. Used to calculate the height of the axis.
+         *
+         * @attribute maxLabelSize
+         * @type Number
+         * @protected
+         */
+        maxLabelSize: {
+            value: 0
+        },
+        
+        /**
+         *  Title for the axis. When specified, the title will display. The position of the title is determined by the axis position. 
+         *  <dl>
+         *      <dt>top</dt><dd>Appears above the axis and it labels. The default rotation is 0.</dd>
+         *      <dt>right</dt><dd>Appears to the right of the axis and its labels. The default rotation is 90.</dd>
+         *      <dt>bottom</dt><dd>Appears below the axis and its labels. The default rotation is 0.</dd>
+         *      <dt>left</dt><dd>Appears to the left of the axis and its labels. The default rotation is -90.</dd>
+         *  </dl>
+         *
+         *  @attribute title
+         *  @type String
+         */
+        title: {}
             
         /**
-         * Style properties used for drawing an axis. This attribute is inherited from <code>Renderer</code>. Below are the default values:
+         * Style properties used for drawing an axis. This attribute is inherited from `Renderer`. Below are the default values:
          *  <dl>
          *      <dt>majorTicks</dt><dd>Properties used for drawing ticks.
          *          <dl>
-         *              <dt>display</dt><dd>Position of the tick. Possible values are <code>inside</code>, <code>outside</code>, <code>cross</code> and <code>none</code>. The
-         *              default value is <code>inside</code>.</dd>
+         *              <dt>display</dt><dd>Position of the tick. Possible values are `inside`, `outside`, `cross` and `none`. The
+         *              default value is `inside`.</dd>
          *              <dt>length</dt><dd>The length (in pixels) of the tick. The default value is 4.</dd>
-         *              <dt>color</dt><dd>The color of the tick. The default value is <code>#dad8c9</code></dd>
+         *              <dt>color</dt><dd>The color of the tick. The default value is `#dad8c9`</dd>
          *              <dt>weight</dt><dd>Number indicating the width of the tick. The default value is 1.</dd>
          *              <dt>alpha</dt><dd>Number from 0 to 1 indicating the opacity of the tick. The default value is 1.</dd>
          *          </dl>
@@ -691,31 +988,31 @@ Y.Axis = Y.Base.create("axis", Y.Widget, [Y.Renderer], {
          *      <dt>line</dt><dd>Properties used for drawing the axis line. 
          *          <dl>
          *              <dt>weight</dt><dd>Number indicating the width of the axis line. The default value is 1.</dd>
-         *              <dt>color</dt><dd>The color of the axis line. The default value is <code>#dad8c9</code>.</dd>
+         *              <dt>color</dt><dd>The color of the axis line. The default value is `#dad8c9`.</dd>
          *              <dt>alpha</dt><dd>Number from 0 to 1 indicating the opacity of the tick. The default value is 1.</dd>
          *          </dl>
          *      </dd>
-         *      <dt>majorUnit</dt><dd>Properties used to calculate the <code>majorUnit</code> for the axis. 
+         *      <dt>majorUnit</dt><dd>Properties used to calculate the `majorUnit` for the axis. 
          *          <dl>
-         *              <dt>determinant</dt><dd>The algorithm used for calculating distance between ticks. The possible options are <code>count</code> and <code>distance</code>. If
-         *              the <code>determinant</code> is <code>count</code>, the axis ticks will spaced so that a specified number of ticks appear on the axis. If the <code>determinant</code>
-         *              is <code>distance</code>, the axis ticks will spaced out according to the specified distance. The default value is <code>count</code>.</dd>
-         *              <dt>count</dt><dd>Number of ticks to appear on the axis when the <code>determinant</code> is <code>count</code>. The default value is 11.</dd>
-         *              <dt>distance</dt><dd>The distance (in pixels) between ticks when the <code>determinant</code> is <code>distance</code>. The default value is 75.</dd>
+         *              <dt>determinant</dt><dd>The algorithm used for calculating distance between ticks. The possible options are `count` and `distance`. If
+         *              the `determinant` is `count`, the axis ticks will spaced so that a specified number of ticks appear on the axis. If the `determinant`
+         *              is `distance`, the axis ticks will spaced out according to the specified distance. The default value is `count`.</dd>
+         *              <dt>count</dt><dd>Number of ticks to appear on the axis when the `determinant` is `count`. The default value is 11.</dd>
+         *              <dt>distance</dt><dd>The distance (in pixels) between ticks when the `determinant` is `distance`. The default value is 75.</dd>
          *          </dl>
          *      </dd>
          *      <dt>label</dt><dd>Properties and styles applied to the axis labels.
          *          <dl>
-         *              <dt>color</dt><dd>The color of the labels. The default value is <code>#808080</code>.</dd>
+         *              <dt>color</dt><dd>The color of the labels. The default value is `#808080`.</dd>
          *              <dt>alpha</dt><dd>Number between 0 and 1 indicating the opacity of the labels. The default value is 1.</dd>
          *              <dt>fontSize</dt><dd>The font-size of the labels. The default value is 85%</dd>
          *              <dt>rotation</dt><dd>The rotation, in degrees (between -90 and 90) of the labels. The default value is 0.</dd>
-         *              <dt>margin</dt><dd>The distance between the label and the axis/tick. Depending on the position of the <code>Axis</code>, only one of the properties used.
+         *              <dt>margin</dt><dd>The distance between the label and the axis/tick. Depending on the position of the `Axis`, only one of the properties used.
          *                  <dl>
-         *                      <dt>top</dt><dd>Pixel value used for an axis with a <code>position</code> of <code>bottom</code>. The default value is 4.</dd>
-         *                      <dt>right</dt><dd>Pixel value used for an axis with a <code>position</code> of <code>left</code>. The default value is 4.</dd>
-         *                      <dt>bottom</dt><dd>Pixel value used for an axis with a <code>position</code> of <code>top</code>. The default value is 4.</dd>
-         *                      <dt>left</dt><dd>Pixel value used for an axis with a <code>position</code> of <code>right</code>. The default value is 4.</dd>
+         *                      <dt>top</dt><dd>Pixel value used for an axis with a `position` of `bottom`. The default value is 4.</dd>
+         *                      <dt>right</dt><dd>Pixel value used for an axis with a `position` of `left`. The default value is 4.</dd>
+         *                      <dt>bottom</dt><dd>Pixel value used for an axis with a `position` of `top`. The default value is 4.</dd>
+         *                      <dt>left</dt><dd>Pixel value used for an axis with a `position` of `right`. The default value is 4.</dd>
          *                  </dl>
          *              </dd>
          *          </dl>
