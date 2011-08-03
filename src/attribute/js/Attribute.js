@@ -21,6 +21,7 @@
 
         DOT = ".",
         CHANGE = "Change",
+        VALIDATION_FAILED = "ValidationFailed",
 
         // Externally configurable props
         GETTER = "getter",
@@ -619,8 +620,25 @@
          * @param {Object} opts Any additional event data to mix into the attribute change event's event facade.
          */
         _fireAttrChange : function(attrName, subAttrName, currVal, newVal, opts) {
+            this._fireAttrEvent(attrName, subAttrName, CHANGE, currVal, newVal, opts);
+        },
+
+        /**
+         * Utility method to help setup the event payload and fire the attribute event.
+         * 
+         * @method _fireAttrEvent
+         * @private
+         * @param {String} attrName The name of the attribute
+         * @param {String} subAttrName The full path of the property being changed, 
+         * if this is a sub-attribute value being change. Otherwise null.
+         * @param {String} eventName The name of the Event to fire
+         * @param {Any} currVal The current value of the attribute
+         * @param {Any} newVal The new value of the attribute
+         * @param {Object} opts Any additional event data to mix into the attribute change event's event facade.
+         */
+        _fireAttrEvent : function(attrName, subAttrName, eventName, currVal, newVal, opts) {
             var host = this,
-                eventName = attrName + CHANGE,
+                eventName = attrName + eventName,
                 state = host._state,
                 facade;
 
@@ -776,6 +794,7 @@
 
             } else {
                 Y.log('Attribute:' + attrName + ', Validation failed for value:' + newVal, 'warn', 'attribute');
+                this._fireAttrEvent(attrName, subAttrName, VALIDATION_FAILED, oldVal, newVal);
                 allowSet = false;
             }
 
