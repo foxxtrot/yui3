@@ -322,7 +322,7 @@
 
                         // If we reconfigured broadcast, need to republish
                         if (prop === BROADCAST) {
-                            state.remove(name, PUBLISHED);
+                            state.removeStartsWith(name, PUBLISHED);
                         }
                     }
                 }
@@ -638,19 +638,19 @@
          */
         _fireAttrEvent : function(attrName, subAttrName, eventName, currVal, newVal, opts) {
             var host = this,
-                eventName = attrName + eventName,
+                combinedEventName = attrName + eventName,
                 state = host._state,
                 facade;
 
-            if (!state.get(attrName, PUBLISHED)) {
-                host.publish(eventName, {
+            if (!state.get(combinedEventName, PUBLISHED)) {
+                host.publish(combinedEventName, {
                     queuable:false,
                     defaultTargetOnly: true, 
-                    defaultFn:host._defAttrChangeFn, 
+                    defaultFn:host['_defAttr' + eventName + 'Fn'],
                     silent:true,
                     broadcast : state.get(attrName, BROADCAST)
                 });
-                state.add(attrName, PUBLISHED, true);
+                state.add(combinedEventName, PUBLISHED, true);
             }
 
             facade = (opts) ? Y.merge(opts) : host._ATTR_E_FACADE;
@@ -665,7 +665,7 @@
             facade.newVal = newVal;
 
             // host.fire(facade);
-            host.fire(eventName, facade);
+            host.fire(combinedEventName, facade);
         },
 
         /**
@@ -771,6 +771,7 @@
 
                         if (retVal === INVALID_VALUE) {
                             Y.log('Attribute: ' + attrName + ', setter returned Attribute.INVALID_VALUE for value:' + newVal, 'warn', 'attribute');
+                            this._fireAttrEvent(attrName, subAttrName, VALIDATION_FAILED, null, newVal);
                             allowSet = false;
                         } else if (retVal !== undefined){
                             Y.log('Attribute: ' + attrName + ', raw value: ' + newVal + ' modified by setter to:' + retVal, 'info', 'attribute');
@@ -794,7 +795,7 @@
 
             } else {
                 Y.log('Attribute:' + attrName + ', Validation failed for value:' + newVal, 'warn', 'attribute');
-                this._fireAttrEvent(attrName, subAttrName, VALIDATION_FAILED, oldVal, newVal);
+                this._fireAttrEvent(attrName, subAttrName, VALIDATION_FAILED, null, newVal);
                 allowSet = false;
             }
 

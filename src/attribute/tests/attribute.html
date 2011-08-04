@@ -33,7 +33,7 @@
     </style>
 
     <script type="text/javascript">
-        YUI({useBrowserConsole:false}).use("dump", "attribute-complex", "base", "console", "test", function(Y) {
+        YUI({useBrowserConsole:false, filter: 'RAW'}).use("dump", "attribute-complex", "base", "console", "test", function(Y) {
 
             function areObjectsReallyEqual(o1, o2) {
                 Y.ObjectAssert.areEqual(o1, o2);
@@ -1097,16 +1097,32 @@
                     Y.Assert.areEqual("AVal", h.get("A")); // Numerical value validation failure should revert to default value
                 },
 
+                testValidationFailure: function() {
+                    var h = this.createHost();
+                    var expectedEvents = ["On AValidationFailed Y Broadcast"];
+                    var actualEvents = [];
+
+                    Y.on("attrHost:AValidationFailed", function() {
+                        actualEvents.push("On AValidationFailed Y Broadcast");
+                    });
+
+                    Y.Assert.areEqual("AVal", h.get("A"), "Before Set");
+                    h.set('A', 5);
+                    Y.Assert.areEqual("AVal", h.get("A"), "After Set");
+
+                    Y.ArrayAssert.itemsAreEqual(expectedEvents, actualEvents);
+                },
+
                 testModifyAttr : function() {
                     var h = this.createHost();
                     var expectedEvents = ["On AChange Y Broadcast", "After AChange Y Broadcast"]
                     var actualEvents = [];
 
-                    Y.on("attrHost:AChange", function() {
+                    var onChangeHandle = Y.on("attrHost:AChange", function() {
                         actualEvents.push("On AChange Y Broadcast");
                     });
 
-                    Y.after("attrHost:AChange", function() {
+                    var afterChangeHandle = Y.after("attrHost:AChange", function() {
                         actualEvents.push("After AChange Y Broadcast");
                     });
 
@@ -1138,7 +1154,8 @@
 
                     Y.Assert.areEqual("NEWAAFTERGETTERBROADCAST", h.get("A"));
                     Y.ArrayAssert.itemsAreEqual(expectedEvents, actualEvents);
-
+                    onChangeHandle.detach();
+                    afterChangeHandle.detach();
                 },
 
                 testProtect : function() {

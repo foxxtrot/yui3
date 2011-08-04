@@ -63,6 +63,13 @@
             }
         },
 
+        removeStartsWith: function(name, key) {
+            var d = this.data[key], prop, re = new RegExp("^" + name);
+            for (prop in d) {
+                if (re.test(prop)) { delete d[prop]; }
+            }
+        },
+
         /**
          * Removes multiple properties from an item, or remove the item completely.
          *
